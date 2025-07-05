@@ -9,9 +9,9 @@ tasks:
       - |
         echo "Generating from {{.PROTO_FILE}}"
 
-        SERVICE_DIR=$(echo {{.PROTO_FILE}} | cut -d'/' -f1)
+        SERVICE_DIR=$(echo {{.PROTO_FILE}} | cut -d'/' -f2)
         FILE_NAME=$(basename {{.PROTO_FILE}} .proto)
-        OUT_DIR="$SERVICE_DIR/api/$FILE_NAME"
+        OUT_DIR="apps/$SERVICE_DIR/api/$FILE_NAME"
 
         mkdir -p "$OUT_DIR"
 
