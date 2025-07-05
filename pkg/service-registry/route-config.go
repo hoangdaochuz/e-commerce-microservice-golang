@@ -46,9 +46,8 @@ func (arc *AutoRouteConfig) GetRoutes() map[string]RouteConfig {
 	return arc.Methods
 }
 
-func (arc *AutoRouteConfig) DiscoveryRoutesFromService(serviceImpl interface{}) {
+func (arc *AutoRouteConfig) DiscoveryRoutesFromService(serviceImpl interface{}, serviceName string) {
 	serviceType := reflect.TypeOf(serviceImpl)
-	serviceName := serviceType.Name()
 	for i := 0; i < serviceType.NumMethod(); i++ {
 		method := serviceType.Method(i)
 		if utils.IsValidServiceMethod(method) {

@@ -91,7 +91,7 @@ func (gw *APIGateway) RegisterServiceWithAutoRoute(serviceName, basePath string,
 
 	// auto config route of each method of service
 	routeConfig := serviceregistry.NewAutoRouteConfig(basePath)
-	routeConfig.DiscoveryRoutesFromService(serviceImpl)
+	routeConfig.DiscoveryRoutesFromService(serviceImpl, serviceName)
 
 	// register http route
 	return gw.RegisterServiceRouteWithConfig(serviceName, routeConfig)
@@ -102,7 +102,7 @@ func (gw *APIGateway) registerMethodRoute(serviceRoute *ServiceRoute, methodRout
 
 	handler := gw.createMethodHandler(serviceRoute.ServiceName, methodRoute)
 	gw.router.HandleFunc(fullPath, handler).Methods(methodRoute.HTTPMethod)
-	log.Printf("Registered route: %s %s -> %s.%s",
+	log.Printf("Registered route: %s %s -> %s.%s\n",
 		methodRoute.HTTPMethod, fullPath, serviceRoute.ServiceName, methodRoute.MethodName)
 }
 

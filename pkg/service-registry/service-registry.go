@@ -68,7 +68,7 @@ func (sr *ServiceRegistry) RegistryOperationOfServices(serviceName string, servi
 	}
 
 	sr.services[serviceName] = *serviceInfo
-	fmt.Printf("service %s registered with %d methods", serviceName, len(serviceInfo.Methods))
+	fmt.Printf("service %s registered with %d methods\n", serviceName, len(serviceInfo.Methods))
 	return nil
 }
 

@@ -19,7 +19,7 @@ import (
 // }
 
 func implementsProtoMessage(message reflect.Type) bool {
-	protoType := reflect.TypeOf((proto.Message)(nil)).Elem()
+	protoType := reflect.TypeOf((*proto.Message)(nil)).Elem()
 	return message.Implements(protoType)
 }
 
@@ -36,7 +36,9 @@ func IsValidServiceMethod(method reflect.Method) bool {
 		return false
 	}
 	// check proto message type
-	if !implementsProtoMessage(methodType.In(2)) || !implementsProtoMessage(methodType.Out(0)) {
+	reqInputType := methodType.In(2)
+	responseType := methodType.Out(0)
+	if !implementsProtoMessage(reqInputType) || !implementsProtoMessage(responseType) {
 		return false
 	}
 	// check type error return
