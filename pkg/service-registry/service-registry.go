@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/service-registry/utils"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 )
@@ -160,41 +160,24 @@ func (sr *ServiceRegistry) discoverMethods(serviceInfo *ServiceInfo) error {
 	for i := 0; i < serviceType.NumMethod(); i++ {
 		method := serviceType.Method(i)
 		methodvalue := serviceValue.Method(i)
-		if sr.isValidServiceMethod(method) {
-			methodName := sr.convertMethodName(method.Name)
+		if utils.IsValidServiceMethod(method) {
+			methodName := method.Name
 			subject := fmt.Sprintf("%s.%s", serviceInfo.Name, methodName)
 			serviceInfo.Methods[methodName] = &MethodInfo{
 				Name:         methodName,
-				RequestType:  method.Type.In(1),
+				RequestType:  method.Type.In(2),
 				ResponseType: method.Type.Out(0),
 				Hanlder:      sr.createHandlerMethod(methodvalue),
 				Subject:      subject,
 			}
 
 			sr.MessageTypes[subject] = &MessageTypeInfo{
-				RequestType:  method.Type.In(1),
+				RequestType:  method.Type.In(2),
 				ResponseType: method.Type.Out(0),
 			}
 		}
 	}
 	return nil
-}
-
-func (sr *ServiceRegistry) isValidServiceMethod(_ reflect.Method) bool {
-	// implement later
-	return true
-}
-
-// Convert pascalCase to snake_case
-func (sr *ServiceRegistry) convertMethodName(methodName string) string {
-	var result strings.Builder
-	for i, r := range methodName {
-		if i > 0 && r >= 'A' && r <= 'Z' {
-			result.WriteRune('_')
-		}
-		result.WriteRune(r)
-	}
-	return strings.ToLower(result.String())
 }
 
 func (sr *ServiceRegistry) CallService(serviceName, methodName string, req proto.Message) (proto.Message, error) {

@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    container_name: nats-jetstream
+    ports:
+      - "4222:4222"   # Client
+      - "8222:8222"   # Monitoring
+      - "6222:6222"   # Cluster
+    volumes:
+      - ./nats-server.conf:/etc/nats/nats-server.conf:ro
+      - ./natslog:/data  # Chứa dữ liệu JetStream
+    command: ["-c", "/etc/nats/nats-server.conf"]
+    restart: unless-stopped
