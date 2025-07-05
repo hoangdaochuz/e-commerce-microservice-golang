@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hoangdaochuz/ecommerce-microservice-golang/order/api/order"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/api/order"
 )
 
 type OrderServiceApp struct {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/hoangdaochuz/ecommerce-microservice-golang/order/app/order"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/handler/order"
 	serviceregistry "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/service-registry"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/encoding/protojson"
