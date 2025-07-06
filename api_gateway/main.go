@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/handler/order"
+	// "github.com/hoangdaochuz/ecommerce-microservice-golang/apps"
+
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
+	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 	serviceregistry "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/service-registry"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -216,9 +218,7 @@ func Start(port string) error {
 	log.Println("Connected to nats successfully")
 	serviceRegistryReqTimout := config.ServiceRegistry.RequestTimeout
 	gateway := NewAPIGateway(natsConn, serviceRegistryReqTimout)
-
-	// temp solution
-	orderService := order.NewOrderServiceApp()
-	gateway.RegisterServiceWithAutoRoute("order", "/api/v1", orderService)
+	di.Make(NewAPIGateway)
+	gateway.GetServiceAppsAndRegisterRouteMethod()
 	return http.ListenAndServe(":"+port, gateway.router)
 }

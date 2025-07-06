@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/api/order"
+	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 )
 
 type OrderServiceApp struct {
@@ -17,6 +18,8 @@ type OrderServiceApp struct {
 func NewOrderServiceApp() *OrderServiceApp {
 	return &OrderServiceApp{}
 }
+
+var _ = di.Make(NewOrderServiceApp)
 
 func (o *OrderServiceApp) CreateOrder(ctx context.Context, req *order.CreateOrderRequest) (*order.CreateOrderResponse, error) {
 

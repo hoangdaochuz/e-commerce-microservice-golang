@@ -116,7 +116,7 @@ func (sr *ServiceRegistry) sendErrorResponse(natMsg *nats.Msg, err error) {
 	if natMsg.Reply == "" {
 		return
 	}
-	errStr := fmt.Sprintf(`{error: "%w"}`, err)
+	errStr := fmt.Sprintf(`{error: "%s"}`, err)
 	natMsg.Respond([]byte(errStr))
 }
 
