@@ -39,11 +39,12 @@ type MessageTypeInfo struct {
 	ResponseType reflect.Type
 }
 
-func NewServiceRegistry(natConn *nats.Conn) *ServiceRegistry {
+func NewServiceRegistry(natConn *nats.Conn, requestTimeout time.Duration) *ServiceRegistry {
 	return &ServiceRegistry{
-		natsConn:     natConn,
-		services:     make(map[string]ServiceInfo),
-		MessageTypes: make(map[string]*MessageTypeInfo),
+		natsConn:       natConn,
+		services:       make(map[string]ServiceInfo),
+		MessageTypes:   make(map[string]*MessageTypeInfo),
+		RequestTimeout: requestTimeout,
 	}
 }
 

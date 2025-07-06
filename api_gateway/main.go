@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/handler/order"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	serviceregistry "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/service-registry"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -70,11 +71,11 @@ func (gw *APIGateway) setupMiddleware() {
 	gw.router.Use(gw.loggingMiddleware, gw.corsMiddleware, gw.contentTypeMiddleware)
 }
 
-func NewAPIGateway(natsConn *nats.Conn) *APIGateway {
+func NewAPIGateway(natsConn *nats.Conn, serviceRegistryReqTimeout time.Duration) *APIGateway {
 	gateway := &APIGateway{
 		natsConn:        natsConn,
 		router:          mux.NewRouter(),
-		serviceRegistry: serviceregistry.NewServiceRegistry(natsConn),
+		serviceRegistry: serviceregistry.NewServiceRegistry(natsConn, serviceRegistryReqTimeout),
 		serviceRoutes:   map[string]ServiceRoute{},
 	}
 	//Setup middleware for gateway
@@ -203,12 +204,18 @@ func (gw *APIGateway) RegisterServiceRouteWithConfig(serviceName string, routeCo
 
 func Start(port string) error {
 	fmt.Printf("Starting API Gateway in port %s\n", port)
-	natsConn, err := nats.Connect("nats://nats_user:nats_pass@localhost:4222")
+	config, err := configs.Load()
+	if err != nil {
+		log.Fatal("failed to load configuration: %w", err)
+	}
+	natsUrl := fmt.Sprintf("nats://%s:%s@localhost:4222", config.ServiceRegistry.NATSUser, config.ServiceRegistry.NATSPassword)
+	natsConn, err := nats.Connect(natsUrl)
 	if err != nil {
 		log.Fatal("Failed to connect to nats")
 	}
 	log.Println("Connected to nats successfully")
-	gateway := NewAPIGateway(natsConn)
+	serviceRegistryReqTimout := config.ServiceRegistry.RequestTimeout
+	gateway := NewAPIGateway(natsConn, serviceRegistryReqTimout)
 
 	// temp solution
 	orderService := order.NewOrderServiceApp()
