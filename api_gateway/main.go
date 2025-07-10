@@ -82,6 +82,7 @@ func NewAPIGateway(natsConn *nats.Conn, serviceRegistryReqTimeout time.Duration)
 	}
 	//Setup middleware for gateway
 	gateway.setupMiddleware()
+	gateway.GetServiceAppsAndRegisterRouteMethod()
 	return gateway
 }
 
@@ -204,6 +205,11 @@ func (gw *APIGateway) RegisterServiceRouteWithConfig(serviceName string, routeCo
 	return nil
 }
 
+// GetServiceRoutes returns the service routes for code generation
+func (gw *APIGateway) GetServiceRoutes() map[string]ServiceRoute {
+	return gw.serviceRoutes
+}
+
 func Start(port string) error {
 	fmt.Printf("Starting API Gateway in port %s\n", port)
 	config, err := configs.Load()
@@ -218,7 +224,9 @@ func Start(port string) error {
 	log.Println("Connected to nats successfully")
 	serviceRegistryReqTimout := config.ServiceRegistry.RequestTimeout
 	gateway := NewAPIGateway(natsConn, serviceRegistryReqTimout)
-	di.Make(NewAPIGateway)
-	gateway.GetServiceAppsAndRegisterRouteMethod()
+	// gateway.GetServiceAppsAndRegisterRouteMethod()
+	di.Make(func() *APIGateway {
+		return gateway
+	})
 	return http.ListenAndServe(":"+port, gateway.router)
 }

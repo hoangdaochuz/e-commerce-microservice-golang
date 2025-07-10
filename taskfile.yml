@@ -20,3 +20,40 @@ tasks:
           --go_out="$OUT_DIR" --go_opt=paths=source_relative \
           --go-grpc_out="$OUT_DIR" --go-grpc_opt=paths=source_relative \
           {{.PROTO_FILE}}
+  frontend:codegen:service:
+    desc: Generate TypeScript/React Query code frontend for specific service
+    vars:
+      outdir: '{{.outdir | default "./frontend/apis"}}'
+      service: '{{.service | default "api-client"}}'
+    cmds:
+      - |
+        echo "  📁 Output Directory: {{.outdir}}"
+        echo "  📦 Service Name: {{.service}}"
+        echo "🔄 Generating frontend code..."
+        go run pkg/codegen/cli/main.go -outdir="{{.outdir}}" -service="{{.service}}"
+  frontend:codegen:all:
+    desc: Generate TypeScript/React Query code frontend for all services
+    vars:
+      outdir: '{{.outdir | default "./frontend/apis"}}'
+    cmds:
+      - |
+        echo "  📁 Output Directory: {{.outdir}}"
+        echo "🔄 Generating frontend code..."
+        go run pkg/codegen/cli/main.go -outdir="{{.outdir}}"
+  frontend:codegen:help:
+    desc: Show help for frontend code generation
+    cmds:
+      - |
+        echo "Frontend Code Generator Help"
+        echo "============================"
+        echo ""
+        echo ""
+        echo "Basic usage:"
+        echo "  task frontend:codegen outdir=./my-frontend/api service=my-api"
+        echo ""
+        echo "Available parameters:"
+        echo "  outdir  - Output directory (default: ./frontend/apis)"
+        echo "  service - Service name for generated code (default: api-client)"
+        echo ""
+        echo "Examples:"
+        echo "  task frontend:codegen service=ecommerce-api outdir=./frontend/generated"
