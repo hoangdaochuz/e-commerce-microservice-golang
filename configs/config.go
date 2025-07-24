@@ -16,9 +16,18 @@ type ServiceRegistryConfig struct {
 	NATSPassword   string        `mapstructure:"nats_password"`
 }
 
+type OrderDatabase struct {
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	DBname   string `mapstructure:"dbname"`
+}
+
 type Config struct {
 	ServiceRegistry ServiceRegistryConfig `mapstructure:"service_registry"`
 	Apigateway      ApigatewayConfig      `mapstructure:"apigateway"`
+	OrderDatabase   OrderDatabase         `mapstructure:"order_database"`
 	// Database --> Later
 	// Log --> Later
 }
@@ -36,6 +45,12 @@ func setDefaults() {
 
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
+
+	viper.SetDefault("order_database.host", "localhost")
+	viper.SetDefault("order_database.port", "5432")
+	viper.SetDefault("order_database.user", "postgres")
+	viper.SetDefault("order_database.password", "postgres")
+	viper.SetDefault("order_database.dbname", "order")
 }
 
 func Load() (*Config, error) {

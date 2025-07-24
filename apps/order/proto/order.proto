@@ -6,6 +6,16 @@ option go_package = "order/api/order";
 
 service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrderById(GetOrderByIdRequest) returns (OrderResponse);
+}
+
+message GetOrderByIdRequest {
+  string Id = 1;
+}
+
+message OrderResponse {
+  string Id = 1;
+  string Name = 2;
 }
 
 message CreateOrderRequest {

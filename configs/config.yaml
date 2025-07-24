@@ -5,3 +5,9 @@ service_registry:
   nats_password: "nats_pass"
 apigateway:
   port: "8080"
+order_database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "postgres"
+  dbname: "order"

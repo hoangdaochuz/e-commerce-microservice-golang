@@ -13,3 +13,16 @@ services:
       - ./natslog:/data  # Chứa dữ liệu JetStream
     command: ["-c", "/etc/nats/nats-server.conf"]
     restart: unless-stopped
+  order_database:
+    image: postgres:latest
+    container_name: order_database
+    ports:
+      - "5432:5432"
+    # volumes:
+    #   - ./order_database:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=order
+    restart: unless-stopped
+
