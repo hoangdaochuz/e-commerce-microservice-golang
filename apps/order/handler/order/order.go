@@ -55,15 +55,11 @@ func (o *OrderServiceApp) GetOrderById(ctx context.Context, req *order.GetOrderB
 	order, err := o.service.GetOrderById(ctx, &order_service.GetOrderByIdRequest{
 		Id: uuid.MustParse(req.Id),
 	})
-	fmt.Println("hello ", order)
-	fmt.Println("err: ", err)
 	if err != nil {
 		return nil, err
 	}
 	if order == nil {
-		fmt.Println("kakaka")
 		return nil, fmt.Errorf("order not found")
 	}
-	fmt.Println("What the fuck")
 	return o.toOrder(*order), nil
 }

@@ -2,11 +2,14 @@ package serviceregistry
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/service-registry/utils"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/shared"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 )
@@ -84,7 +87,9 @@ func (sr *ServiceRegistry) subcribeMethodsService(methodInfo *MethodInfo) error 
 		}
 
 		protoRes, err := methodInfo.Hanlder(ctx, protoReq)
+		fmt.Println("Handler protoRes ", protoRes, "err: ", err)
 		if err != nil {
+			fmt.Println("vao day")
 			sr.sendErrorResponse(natMsg, err)
 			return
 		}
@@ -113,11 +118,23 @@ func (sr *ServiceRegistry) subcribeMethodsService(methodInfo *MethodInfo) error 
 }
 
 func (sr *ServiceRegistry) sendErrorResponse(natMsg *nats.Msg, err error) {
+	fmt.Println("sendErrorResponse: ", err)
 	if natMsg.Reply == "" {
 		return
 	}
-	errStr := fmt.Sprintf(`{error: "%s"}`, err)
-	natMsg.Respond([]byte(errStr))
+
+	var errResponse = shared.ErrorResponse{
+		Err:     err.Error(),
+		ErrType: shared.Internal_Server_Err,
+	}
+	payload, e := json.Marshal(errResponse)
+	if e != nil {
+		fmt.Println("fail to marshal err response")
+		return
+	}
+
+	// errStr := fmt.Sprintf(`{error: "%s"}`, err)
+	natMsg.Respond(payload)
 }
 
 func (sr *ServiceRegistry) decodeNatsMessage(msg []byte, msgType reflect.Type) (proto.Message, error) {
@@ -194,6 +211,13 @@ func (sr *ServiceRegistry) CallService(serviceName, methodName string, req proto
 
 	if err != nil {
 		return nil, err
+	}
+	// check if resMsg is err from service?
+	var errRes shared.ErrorResponse
+	err = json.Unmarshal(resMsg.Data, &errRes)
+	if err == nil {
+		// have error from service
+		return nil, errors.New(errRes.Err)
 	}
 
 	resProtoType := serviceInfo.Methods[methodName].ResponseType

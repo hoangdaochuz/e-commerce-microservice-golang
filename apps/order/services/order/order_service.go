@@ -2,6 +2,8 @@ package order_service
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	order_repository "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository"
@@ -27,10 +29,13 @@ type GetOrderByIdRequest struct {
 func (o *OrderService) GetOrderById(ctx context.Context, req *GetOrderByIdRequest) (*order_repository.Order, error) {
 	entity, err := o.OrderRepo.FindOrderById(ctx, req.Id)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("order not found")
+		}
 		return nil, err
 	}
 	if entity == nil {
-		return nil, nil
+		return nil, fmt.Errorf("order not found")
 	}
 	return entity, nil
 }
