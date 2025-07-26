@@ -224,7 +224,6 @@ func Start(port string) error {
 	log.Println("Connected to nats successfully")
 	serviceRegistryReqTimout := config.ServiceRegistry.RequestTimeout
 	gateway := NewAPIGateway(natsConn, serviceRegistryReqTimout)
-	// gateway.GetServiceAppsAndRegisterRouteMethod()
 	di.Make(func() *APIGateway {
 		return gateway
 	})
