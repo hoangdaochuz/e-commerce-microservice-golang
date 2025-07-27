@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
-	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres"
+	postgres "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres_sqlx"
 	_ "github.com/lib/pq"
 )
 

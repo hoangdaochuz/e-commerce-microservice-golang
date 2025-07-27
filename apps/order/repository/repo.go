@@ -7,7 +7,7 @@ import (
 	order_configs "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/configs"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 	repo_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo"
-	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres"
+	postgres "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres_sqlx"
 )
 
 type OrderRepository struct {
@@ -32,4 +32,14 @@ func (o *OrderRepository) FindOrderById(ctx context.Context, id uuid.UUID) (*Ord
 		return nil, err
 	}
 	return entity, nil
+}
+
+func (o *OrderRepository) CreateOrderWithTransaction(ctx context.Context, data Order, other ...interface{}) error {
+	handler := func(ctx context.Context, others ...interface{}) error {
+		// query :=
+		// handler create order here
+		return nil
+	}
+
+	return o.repo.WithTransaction(ctx, handler, other...)
 }
