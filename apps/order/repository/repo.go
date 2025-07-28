@@ -34,11 +34,11 @@ func (o *OrderRepository) FindOrderById(ctx context.Context, id uuid.UUID) (*Ord
 	return entity, nil
 }
 
-func (o *OrderRepository) CreateOrderWithTransaction(ctx context.Context, data Order, other ...interface{}) error {
-	handler := func(ctx context.Context, others ...interface{}) error {
+func (o *OrderRepository) CreateOrderWithTransaction(ctx context.Context, data Order, other ...interface{}) (interface{}, error) {
+	handler := func(ctx context.Context, others ...interface{}) (interface{}, error) {
 		// query :=
 		// handler create order here
-		return nil
+		return nil, nil
 	}
 
 	return o.repo.WithTransaction(ctx, handler, other...)

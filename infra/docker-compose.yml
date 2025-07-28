@@ -25,4 +25,16 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=order
     restart: unless-stopped
+  
+  user_database:
+    image: mongo:latest
+    container_name: user_database
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    # volumes:
+    #   - mongo-data:/data/db
 

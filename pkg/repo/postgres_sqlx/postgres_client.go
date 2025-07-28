@@ -17,7 +17,7 @@ func NewPostgresDBClient(conn *PostgresConnection) repo.IDBClient {
 	}
 }
 
-func (p *PostgresDBClient) FindAll(ctx context.Context, out []repo.BaseModel, query interface{}, others ...interface{}) error {
+func (p *PostgresDBClient) FindAll(ctx context.Context, out, query interface{}, others ...interface{}) error {
 	_query, ok := query.(string)
 	if !ok {
 		return fmt.Errorf("query must be string")
@@ -35,7 +35,7 @@ func (p *PostgresDBClient) FindOne(ctx context.Context, out repo.BaseModel, quer
 }
 
 // BulkCreate implements repo.IDBClient.
-func (p *PostgresDBClient) BulkCreate(ctx context.Context, query interface{}, data []repo.BaseModel, others ...interface{}) error {
+func (p *PostgresDBClient) BulkCreate(ctx context.Context, query interface{}, data []interface{}, out interface{}, others ...interface{}) error {
 	_query, ok := query.(string)
 	if !ok {
 		return fmt.Errorf("query must be string")
@@ -80,39 +80,8 @@ func (p *PostgresDBClient) Delete(ctx context.Context, query interface{}, others
 	}
 }
 
-func (p *PostgresDBClient) buildWhereConditionSQL(queries []repo.QueryParams) string {
-	whereQueryString := "WHERE "
-	for _, query := range queries {
-		whereQueryString += fmt.Sprintf("%s = %s %s ", query.Key, query.Value, query.Operator)
-	}
-	return whereQueryString
-}
-
 // PaginateV2 implements repo.IDBClient.
-func (p *PostgresDBClient) Paginate(ctx context.Context, table string, paginationParams repo.PaginationRequest, others ...interface{}) (*repo.Pagination, error) {
-	whereQueryString := p.buildWhereConditionSQL(paginationParams.Query)
-	queryString := fmt.Sprintf("SELECT * FROM %s %s LIMIT=%d OFFSET=%d", table, whereQueryString, paginationParams.Limit, (paginationParams.Page-1)*paginationParams.Limit)
-	var result []repo.BaseModel
-	err := p.conn.DB.SelectContext(ctx, &result, queryString, others...)
-	if err != nil {
-		return nil, err
-	}
-	var total int
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s %s", table, whereQueryString)
-	err = p.conn.DB.GetContext(ctx, &total, countQuery, others...)
-	if err != nil {
-		return nil, err
-	}
-
-	return &repo.Pagination{
-		Total: total,
-		Limit: paginationParams.Limit,
-		Data:  result,
-	}, nil
-}
-
-// PaginateV2 implements repo.IDBClient.
-func (p *PostgresDBClient) PaginateV2(ctx context.Context, query interface{}, out []repo.BaseModel, paginationParams repo.PaginationRequest, others ...interface{}) (*repo.Pagination, error) {
+func (p *PostgresDBClient) Paginate(ctx context.Context, query, out interface{}, paginationParams repo.PaginationRequest, others ...interface{}) (*repo.Pagination, error) {
 
 	total, err := p.Count(ctx, query, others...)
 	if err != nil {
@@ -130,17 +99,17 @@ func (p *PostgresDBClient) PaginateV2(ctx context.Context, query interface{}, ou
 	return &repo.Pagination{
 		Limit: paginationParams.Limit,
 		Total: total,
-		Data:  out,
+		// Data:  out.([]repo.BaseModel),
 	}, nil
 }
 
 // UpdateMany implements repo.IDBClient.
-func (p *PostgresDBClient) UpdateMany(ctx context.Context, update repo.BaseModel, out repo.BaseModel, others ...interface{}) error {
+func (p *PostgresDBClient) UpdateMany(ctx context.Context, filter, update, out interface{}, others ...interface{}) error {
 	panic("unimplemented")
 }
 
 // UpdateOne implements repo.IDBClient.
-func (p *PostgresDBClient) UpdateOneAndReturn(ctx context.Context, query interface{}, data, out repo.BaseModel, others ...interface{}) error {
+func (p *PostgresDBClient) UpdateOneAndReturn(ctx context.Context, query, data interface{}, out repo.BaseModel, others ...interface{}) error {
 	_query, ok := query.(string)
 	if !ok {
 		return fmt.Errorf("query must be string")
@@ -150,16 +119,17 @@ func (p *PostgresDBClient) UpdateOneAndReturn(ctx context.Context, query interfa
 }
 
 // Upsert implements repo.IDBClient.
-func (p *PostgresDBClient) Upsert(ctx context.Context, data repo.BaseModel, others ...interface{}) error {
+func (p *PostgresDBClient) Upsert(ctx context.Context, filter, update interface{}, out repo.BaseModel, others ...interface{}) error {
 	panic("unimplemented")
 }
 
-func (p *PostgresDBClient) WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) error, others ...interface{}) error {
+func (p *PostgresDBClient) WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) (interface{}, error), others ...interface{}) (interface{}, error) {
 	transaction := p.conn.DB.MustBegin()
-	err := fn(ctx, others...)
+	result, err := fn(ctx, others...)
 	if err != nil {
 		err = transaction.Rollback()
-		return err
+		return nil, err
 	}
-	return transaction.Commit()
+	transaction.Commit()
+	return result, nil
 }

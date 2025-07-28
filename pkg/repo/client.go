@@ -6,17 +6,17 @@ import (
 
 type IDBClient interface {
 	Create(ctx context.Context, query interface{}, data BaseModel, others ...interface{}) error
-	BulkCreate(ctx context.Context, query interface{}, data []BaseModel, others ...interface{}) error
-	Upsert(ctx context.Context, data BaseModel, others ...interface{}) error
-	UpdateOneAndReturn(ctx context.Context, query interface{}, data, out BaseModel, others ...interface{}) error
-	UpdateMany(ctx context.Context, data, out BaseModel, others ...interface{}) error
-	FindAll(ctx context.Context, out []BaseModel, query interface{}, others ...interface{}) error
+	BulkCreate(ctx context.Context, query interface{}, data []interface{}, out interface{}, others ...interface{}) error
+	Upsert(ctx context.Context, filter, update interface{}, out BaseModel, others ...interface{}) error
+	UpdateOneAndReturn(ctx context.Context, query, update interface{}, out BaseModel, others ...interface{}) error
+	UpdateMany(ctx context.Context, filter, update, out interface{}, others ...interface{}) error
+	FindAll(ctx context.Context, out, query interface{}, others ...interface{}) error
 	FindOne(ctx context.Context, out BaseModel, query interface{}, others ...interface{}) error
 	Delete(ctx context.Context, query interface{}, others ...interface{}) error
 	Count(ctx context.Context, query interface{}, others ...interface{}) (int, error)
-	Paginate(ctx context.Context, destColl string, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error)
-	PaginateV2(ctx context.Context, query interface{}, out []BaseModel, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error)
-	WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) error, others ...interface{}) error
+	// Paginate(ctx context.Context, destColl string, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error)
+	Paginate(ctx context.Context, query, out interface{}, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error)
+	WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) (interface{}, error), others ...interface{}) (interface{}, error)
 	// comming soon
 }
 
@@ -61,20 +61,20 @@ func (r *Repo[model]) Create(ctx context.Context, query interface{}, data BaseMo
 	return r.IDBClient.Create(ctx, query, data, others...)
 }
 
-func (r *Repo[model]) BulkCreate(ctx context.Context, query interface{}, data []BaseModel, others ...interface{}) error {
-	return r.IDBClient.BulkCreate(ctx, query, data, others...)
+func (r *Repo[model]) BulkCreate(ctx context.Context, query interface{}, data []interface{}, out interface{}, others ...interface{}) error {
+	return r.IDBClient.BulkCreate(ctx, query, data, out, others...)
 }
 
-func (r *Repo[model]) Upsert(ctx context.Context, data BaseModel, others ...interface{}) error {
-	return r.IDBClient.Upsert(ctx, data, others...)
+func (r *Repo[model]) Upsert(ctx context.Context, filter, update interface{}, out BaseModel, others ...interface{}) error {
+	return r.IDBClient.Upsert(ctx, filter, update, out, others...)
 }
 
 func (r *Repo[model]) UpdateOneAndReturn(ctx context.Context, query interface{}, data, out BaseModel, others ...interface{}) error {
 	return r.IDBClient.UpdateOneAndReturn(ctx, query, data, out, others...)
 }
 
-func (r *Repo[model]) UpdateMany(ctx context.Context, data, out BaseModel, others ...interface{}) error {
-	return r.IDBClient.UpdateMany(ctx, data, out, others...)
+func (r *Repo[model]) UpdateMany(ctx context.Context, filter, update, out interface{}, others ...interface{}) error {
+	return r.IDBClient.UpdateMany(ctx, filter, update, out, others...)
 }
 
 func (r *Repo[model]) Delete(ctx context.Context, query interface{}, others ...interface{}) error {
@@ -85,14 +85,14 @@ func (r *Repo[model]) Count(ctx context.Context, query interface{}, others ...in
 	return r.IDBClient.Count(ctx, query, others...)
 }
 
-func (r *Repo[model]) WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) error, others ...interface{}) error {
+func (r *Repo[model]) WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) (interface{}, error), others ...interface{}) (interface{}, error) {
 	return r.IDBClient.WithTransaction(ctx, fn, others...)
 }
 
-func (r *Repo[model]) Paginate(ctx context.Context, destColl string, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error) {
-	return r.IDBClient.Paginate(ctx, destColl, paginationParams, others...)
-}
+// func (r *Repo[model]) Paginate(ctx context.Context, destColl string, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error) {
+// 	return r.IDBClient.Paginate(ctx, destColl, paginationParams, others...)
+// }
 
-func (r *Repo[model]) PaginateV2(ctx context.Context, query interface{}, out []BaseModel, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error) {
-	return r.IDBClient.PaginateV2(ctx, query, out, paginationParams, others...)
+func (r *Repo[model]) Paginate(ctx context.Context, query interface{}, out []BaseModel, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error) {
+	return r.IDBClient.Paginate(ctx, query, out, paginationParams, others...)
 }
