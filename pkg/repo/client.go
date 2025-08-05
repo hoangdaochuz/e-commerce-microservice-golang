@@ -14,7 +14,6 @@ type IDBClient interface {
 	FindOne(ctx context.Context, out BaseModel, query interface{}, others ...interface{}) error
 	Delete(ctx context.Context, query interface{}, others ...interface{}) error
 	Count(ctx context.Context, query interface{}, others ...interface{}) (int, error)
-	// Paginate(ctx context.Context, destColl string, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error)
 	Paginate(ctx context.Context, query, out interface{}, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error)
 	WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) (interface{}, error), others ...interface{}) (interface{}, error)
 	// comming soon

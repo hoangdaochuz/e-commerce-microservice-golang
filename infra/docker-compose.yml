@@ -25,7 +25,17 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=order
     restart: unless-stopped
-  
+  payment_database:
+    image: postgres:latest
+    container_name: payment_database
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=payment
+    restart: unless-stopped 
+
   user_database:
     image: mongo:latest
     container_name: user_database

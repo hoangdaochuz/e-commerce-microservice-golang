@@ -12,3 +12,10 @@ This is a microservices-based e-commerce application built with Go, implementing
 - Frontend code generation for TypeScript/React Query
 
 ## Project Structure
+
+
+## Run docker
+- From root project
+```
+docker compose -f ./infra/docker-compose.yml -p e-commerce-microservice-golang up
+```
