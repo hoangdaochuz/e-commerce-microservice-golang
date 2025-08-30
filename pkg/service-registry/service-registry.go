@@ -89,7 +89,6 @@ func (sr *ServiceRegistry) subcribeMethodsService(methodInfo *MethodInfo) error 
 		protoRes, err := methodInfo.Hanlder(ctx, protoReq)
 		fmt.Println("Handler protoRes ", protoRes, "err: ", err)
 		if err != nil {
-			fmt.Println("vao day")
 			sr.sendErrorResponse(natMsg, err)
 			return
 		}

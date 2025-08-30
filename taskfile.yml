@@ -57,3 +57,18 @@ tasks:
         echo ""
         echo "Examples:"
         echo "  task frontend:codegen service=ecommerce-api outdir=./frontend/generated"
+  backend:dev:
+    desc: Run backend development server
+    deps: [backend:api_gateway, backend:order]
+  backend:api_gateway:
+    desc: Run api gateway service
+    cmds:
+      - |
+        go build -o cmd/main cmd/main.go
+        ./cmd/main
+  backend:order:
+    desc: Run order service
+    cmds:
+      - |
+        go build -o apps/order/cmd/main apps/order/cmd/main.go
+        ./apps/order/cmd/main

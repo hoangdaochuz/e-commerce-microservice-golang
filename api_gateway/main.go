@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	// "github.com/hoangdaochuz/ecommerce-microservice-golang/apps"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
