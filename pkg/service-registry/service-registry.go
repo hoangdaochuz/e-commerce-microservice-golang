@@ -3,8 +3,8 @@ package serviceregistry
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"time"
 
@@ -87,23 +87,27 @@ func (sr *ServiceRegistry) subcribeMethodsService(methodInfo *MethodInfo) error 
 		}
 
 		protoRes, err := methodInfo.Hanlder(ctx, protoReq)
-		fmt.Println("Handler protoRes ", protoRes, "err: ", err)
 		if err != nil {
-			sr.sendErrorResponse(natMsg, err)
+			sr.sendErrorResponse(natMsg, err, http.StatusInternalServerError)
 			return
 		}
 		// send proto res back to nats
 		if natMsg.Reply != "" {
+			if protoRes == nil {
+				sr.sendErrorResponse(natMsg, fmt.Errorf("response not found"), http.StatusNotFound)
+				return
+			}
+
 			natsResponseByte, err := proto.Marshal(protoRes)
 			if err != nil {
 				fmt.Println("fail to marshal proto response")
-				sr.sendErrorResponse(natMsg, err)
+				sr.sendErrorResponse(natMsg, err, http.StatusInternalServerError)
 				return
 			}
 			err = natMsg.Respond(natsResponseByte)
 			if err != nil {
 				fmt.Println("fail to reply back to nats, err: %w", err)
-				sr.sendErrorResponse(natMsg, err)
+				sr.sendErrorResponse(natMsg, err, http.StatusInternalServerError)
 				return
 			}
 		}
@@ -116,15 +120,15 @@ func (sr *ServiceRegistry) subcribeMethodsService(methodInfo *MethodInfo) error 
 	return nil
 }
 
-func (sr *ServiceRegistry) sendErrorResponse(natMsg *nats.Msg, err error) {
+func (sr *ServiceRegistry) sendErrorResponse(natMsg *nats.Msg, err error, statusCode int) {
 	fmt.Println("sendErrorResponse: ", err)
 	if natMsg.Reply == "" {
 		return
 	}
 
 	var errResponse = shared.ErrorResponse{
-		Err:     err.Error(),
-		ErrType: shared.Internal_Server_Err,
+		Err:        err.Error(),
+		StatusCode: statusCode,
 	}
 	payload, e := json.Marshal(errResponse)
 	if e != nil {
@@ -197,32 +201,43 @@ func (sr *ServiceRegistry) discoverMethods(serviceInfo *ServiceInfo) error {
 	return nil
 }
 
-func (sr *ServiceRegistry) CallService(serviceName, methodName string, req proto.Message) (proto.Message, error) {
+func (sr *ServiceRegistry) CallService(serviceName, methodName string, req proto.Message) (proto.Message, *shared.ErrorResponse) {
 	subject := fmt.Sprintf("%s.%s", serviceName, methodName)
 	serviceInfo := sr.services[serviceName]
 	// convert req proto message to []byte to send to nats
 	natMsg, err := proto.Marshal(req)
 	if err != nil {
-		return nil, err
+		return nil, &shared.ErrorResponse{
+			Err:        err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}
 	}
 	// wait to receive response from nats
 	resMsg, err := sr.natsConn.Request(subject, natMsg, sr.RequestTimeout)
-
 	if err != nil {
-		return nil, err
+		return nil, &shared.ErrorResponse{
+			Err:        err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}
 	}
 	// check if resMsg is err from service?
 	var errRes shared.ErrorResponse
 	err = json.Unmarshal(resMsg.Data, &errRes)
 	if err == nil {
 		// have error from service
-		return nil, errors.New(errRes.Err)
+		return nil, &shared.ErrorResponse{
+			Err:        errRes.Err,
+			StatusCode: errRes.StatusCode,
+		}
 	}
 
 	resProtoType := serviceInfo.Methods[methodName].ResponseType
 	resProto, err := sr.decodeNatsMessage(resMsg.Data, resProtoType)
 	if err != nil {
-		return nil, err
+		return nil, &shared.ErrorResponse{
+			Err:        err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}
 	}
 	return resProto, nil
 }

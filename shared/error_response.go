@@ -8,6 +8,6 @@ const (
 )
 
 type ErrorResponse struct {
-	Err     string
-	ErrType ErrorType
+	Err        string
+	StatusCode int
 }

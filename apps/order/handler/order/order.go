@@ -59,7 +59,7 @@ func (o *OrderServiceApp) GetOrderById(ctx context.Context, req *order.GetOrderB
 		return nil, err
 	}
 	if order == nil {
-		return nil, fmt.Errorf("order not found")
+		return nil, nil
 	}
 	return o.toOrder(*order), nil
 }

@@ -114,25 +114,30 @@ func (gw *APIGateway) createMethodHandler(serviceName string, methodRoute Method
 		// convert http request to proto.Message
 		protoReq, err := gw.buildRequestMessage(r, methodRoute)
 		if err != nil {
-			gw.sendErrorResponse(w, err, http.StatusBadRequest)
+			gw.sendErrorResponse(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		// call target service for this url
-		protoRes, err := gw.serviceRegistry.CallService(serviceName, methodRoute.MethodName, protoReq)
-		if err != nil {
-			gw.sendErrorResponse(w, err, http.StatusInternalServerError)
+		protoRes, errRes := gw.serviceRegistry.CallService(serviceName, methodRoute.MethodName, protoReq)
+		if errRes != nil {
+			gw.sendErrorResponse(w, errRes.Err, errRes.StatusCode)
 			return
 		}
+
+		if protoRes == nil {
+			gw.sendErrorResponse(w, "response not found", http.StatusNotFound)
+		}
+
 		// Convert protoRes (proto.Message) to HTTP Response json
 		gw.sendSuccessResponse(w, protoRes)
 	}
 }
 
-func (gw *APIGateway) sendErrorResponse(w http.ResponseWriter, err error, statusCode int) {
+func (gw *APIGateway) sendErrorResponse(w http.ResponseWriter, err string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	errResponse := map[string]string{
-		"error": err.Error(),
+		"error": err,
 	}
 	json.NewEncoder(w).Encode(errResponse)
 }
@@ -142,7 +147,7 @@ func (gw *APIGateway) sendSuccessResponse(w http.ResponseWriter, protoResponse p
 	// parse proto message to json
 	protoDataByte, err := protojson.Marshal(protoResponse)
 	if err != nil {
-		gw.sendErrorResponse(w, err, http.StatusInternalServerError)
+		gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Write(protoDataByte)
