@@ -83,7 +83,8 @@ func (sr *ServiceRegistry) subcribeMethodsService(methodInfo *MethodInfo) error 
 		// convert message.Data ([]byte) to proto.Message
 		protoReq, err := sr.decodeNatsMessage(natMsg.Data, methodInfo.RequestType)
 		if err != nil {
-			fmt.Println("fail to decode nats msg to protobuf payload")
+			sr.sendErrorResponse(natMsg, err, http.StatusInternalServerError)
+			return
 		}
 
 		protoRes, err := methodInfo.Hanlder(ctx, protoReq)
