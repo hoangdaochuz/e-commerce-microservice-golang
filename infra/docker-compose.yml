@@ -48,3 +48,11 @@ services:
     # volumes:
     #   - mongo-data:/data/db
 
+  nats_auth:
+    image: hkdarealest/nats_auth:0.1.6
+    container_name: nats_auth
+    restart: unless-stopped
+    depends_on:
+      - nats
+    environment:
+      - NATS_AUTH_NATS_URL=nats://nats:4222

@@ -9,11 +9,14 @@ import (
 	"github.com/spf13/viper"
 )
 
+type NATSApp struct {
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	Account  string `mapstructure:"account"`
+}
+
 type ServiceRegistryConfig struct {
 	RequestTimeout time.Duration `mapstructure:"request_timeout"`
-	NATSUrl        string        `mapstructure:"nats_url"`
-	NATSUser       string        `mapstructure:"nats_user"`
-	NATSPassword   string        `mapstructure:"nats_password"`
 }
 
 type OrderDatabase struct {
@@ -24,10 +27,17 @@ type OrderDatabase struct {
 	DBname   string `mapstructure:"dbname"`
 }
 
+type NATSAuth struct {
+	AuthCallOutSubject string    `mapstructure:"auth_callout_subject"`
+	NATSUrl            string    `mapstructure:"nats_url"`
+	NATSApps           []NATSApp `mapstructure:"nats_apps"`
+}
+
 type Config struct {
 	ServiceRegistry ServiceRegistryConfig `mapstructure:"service_registry"`
 	Apigateway      ApigatewayConfig      `mapstructure:"apigateway"`
 	OrderDatabase   OrderDatabase         `mapstructure:"order_database"`
+	NatsAuth        NATSAuth              `mapstructure:"nats_auth"`
 	// Database --> Later
 	// Log --> Later
 }
@@ -38,9 +48,20 @@ type ApigatewayConfig struct {
 
 func setDefaults() {
 	viper.SetDefault("service_registry.request_timeout", 30*time.Second)
-	viper.SetDefault("service_registry.nats_url", "nats://localhost:4222")
-	viper.SetDefault("service_registry.nats_user", "nats_user")
-	viper.SetDefault("service_registry.nats_password", "nats_pass")
+	viper.SetDefault("nats_auth.nats_url", "nats://localhost:4222")
+
+	viper.SetDefault("nats_auth.nats_apps.0.username", "app")
+	viper.SetDefault("nats_auth.nats_apps.0.password", "app")
+	viper.SetDefault("nats_auth.nats_apps.0.account", "APP")
+	viper.SetDefault("nats_auth.nats_apps.1.username", "admin")
+	viper.SetDefault("nats_auth.nats_apps.1.password", "admin")
+	viper.SetDefault("nats_auth.nats_apps.1.account", "ADMIN")
+	viper.SetDefault("nats_auth.nats_apps.2.username", "auth")
+	viper.SetDefault("nats_auth.nats_apps.2.password", "auth")
+	viper.SetDefault("nats_auth.nats_apps.2.account", "AUTH")
+
+	// viper.SetDefault("service_registry.nats_user", "nats_user")
+	// viper.SetDefault("service_registry.nats_password", "nats_pass")
 	viper.SetDefault("apigateway.port", "8080")
 
 	viper.SetDefault("log.level", "info")
@@ -72,6 +93,7 @@ func Load() (*Config, error) {
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	_ = viper.BindEnv("nats_auth.nats_url")
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

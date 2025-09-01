@@ -1,8 +1,18 @@
+nats_auth:
+  auth_callout_subject: "$SYS.REQ.USER.AUTH"
+  nats_url: "nats://localhost:4222"
+  nats_apps:
+    - username: "app"
+      password: "app"
+      account: "APP"
+    - username: "admin"
+      password: "admin"
+      account: "ADMIN"
+    - username: "auth"
+      password: "auth"
+      account: "AUTH"
 service_registry:
   request_timeout: 30s
-  nats_url: "nats://localhost:4222"
-  nats_user: "nats_user"
-  nats_password: "nats_pass"
 apigateway:
   port: "8080"
 order_database:

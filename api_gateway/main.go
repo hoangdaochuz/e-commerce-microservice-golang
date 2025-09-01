@@ -220,8 +220,7 @@ func Start(port string) error {
 	if err != nil {
 		log.Fatal("failed to load configuration: %w", err)
 	}
-	natsUrl := fmt.Sprintf("nats://%s:%s@localhost:4222", config.ServiceRegistry.NATSUser, config.ServiceRegistry.NATSPassword)
-	natsConn, err := nats.Connect(natsUrl)
+	natsConn, err := nats.Connect(config.NatsAuth.NATSUrl, nats.UserInfo(config.NatsAuth.NATSApps[0].Username, config.NatsAuth.NATSApps[0].Password))
 	if err != nil {
 		log.Fatal("Failed to connect to nats")
 	}

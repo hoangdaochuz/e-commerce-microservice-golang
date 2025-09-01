@@ -1,5 +1,7 @@
 version: 3
 
+dotenv: [".env"]
+
 tasks:
   backend:codegen:
     desc: Generate Go code from proto file
@@ -57,9 +59,27 @@ tasks:
         echo ""
         echo "Examples:"
         echo "  task frontend:codegen service=ecommerce-api outdir=./frontend/generated"
+
+  backend:build:nats_auth:
+    desc: Build docker image for nats auth service
+    vars:
+      IMAGE: "{{.DOCKER_USERNAME}}/nats_auth"
+      TAG: "0.1.6"
+    cmds:
+      - |
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        docker build --no-cache  -f apps/nats_auth/Dockerfile -t {{.IMAGE}}:{{.TAG}} .
+        docker push {{.IMAGE}}:{{.TAG}}
+
   backend:dev:
     desc: Run backend development server
-    deps: [backend:api_gateway, backend:order]
+    cmds:
+      - task: go_apps
+
+  go_apps:
+    deps:
+      - task: backend:api_gateway
+        on_success: backend:order
   backend:api_gateway:
     desc: Run api gateway service
     cmds:

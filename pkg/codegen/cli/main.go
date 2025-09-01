@@ -28,7 +28,7 @@ func setupAPIGateway() error {
 	if err != nil {
 		fmt.Errorf("failed to load config value %w", err)
 	}
-	natsUrl := fmt.Sprintf("nats://%s:%s@localhost:4222", configs.ServiceRegistry.NATSUser, configs.ServiceRegistry.NATSPassword)
+	natsUrl := fmt.Sprintf("nats://%s:%s@localhost:4222", configs.NatsAuth.NATSApps[0].Username, configs.NatsAuth.NATSApps[0].Password)
 	natsConn, err := nats.Connect(natsUrl)
 	if err != nil {
 		return fmt.Errorf("failed to connect to nats")
