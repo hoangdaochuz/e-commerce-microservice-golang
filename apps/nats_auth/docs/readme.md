@@ -1,0 +1,1 @@
+Click following url for nats auth service flow: https://drive.google.com/file/d/1R2dbvildgx8Crr7gnLlEqgUiL6naMDaM/view?usp=sharing
