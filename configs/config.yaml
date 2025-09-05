@@ -11,6 +11,10 @@ nats_auth:
     - username: "auth"
       password: "auth"
       account: "AUTH"
+  xkey_private: "XKEY_PRIVATE"
+  xkey_public: "XAIQQJE4ESQULXOYQXCVVIJEFOO54HGKMM6JMER7IIOHC3TVPJAXN2R6"
+  issuer: "AA7IEJQVWCOXH5QEWEKE34XLJR4OOZG6WTU6TRNTR3EMHCQZ4IQMFL6G"
+  issuer_private: "ISSUER_PRIVATE"
 service_registry:
   request_timeout: 30s
 apigateway:

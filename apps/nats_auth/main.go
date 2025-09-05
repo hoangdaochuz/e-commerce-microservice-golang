@@ -14,7 +14,7 @@ import (
 
 func main() {
 	config, err := configs.Load()
-	fmt.Println("NATS URL final:", config.NatsAuth.NATSUrl)
+	xkeyPrivate := config.NatsAuth.XKeyPrivate
 	if err != nil {
 		log.Fatal("failed to load configuration: %w", err)
 	}
@@ -29,7 +29,13 @@ func main() {
 		log.Fatal("[NATS Auth] failed to connect to nats: %w", err)
 	}
 
-	server := nats_auth_service.NewServer(natsConn, config.NatsAuth.AuthCallOutSubject)
+	natsApps := config.NatsAuth.NATSApps
+	issuerPrivate := config.NatsAuth.IssuerPrivate
+
+	server, err := nats_auth_service.NewServer(natsConn, config.NatsAuth.AuthCallOutSubject, xkeyPrivate, natsApps, issuerPrivate)
+	if err != nil {
+		log.Fatal("failed to create nats auth server: %w", err)
+	}
 	err = server.Listen()
 	if err != nil {
 		panic("Fail to listen to nats auth subject")

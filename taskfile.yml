@@ -64,7 +64,7 @@ tasks:
     desc: Build docker image for nats auth service
     vars:
       IMAGE: "{{.DOCKER_USERNAME}}/nats_auth"
-      TAG: "0.1.6"
+      TAG: "0.1.45"
     cmds:
       - |
         echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin

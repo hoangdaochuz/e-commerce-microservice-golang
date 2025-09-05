@@ -49,10 +49,12 @@ services:
     #   - mongo-data:/data/db
 
   nats_auth:
-    image: hkdarealest/nats_auth:0.1.6
+    image: hkdarealest/nats_auth:0.1.45
     container_name: nats_auth
     restart: unless-stopped
     depends_on:
       - nats
+    env_file:
+      - ../.env
     environment:
-      - NATS_AUTH_NATS_URL=nats://nats:4222
+      NATS_AUTH_NATS_URL: nats://nats:4222

@@ -31,6 +31,10 @@ type NATSAuth struct {
 	AuthCallOutSubject string    `mapstructure:"auth_callout_subject"`
 	NATSUrl            string    `mapstructure:"nats_url"`
 	NATSApps           []NATSApp `mapstructure:"nats_apps"`
+	XKeyPrivate        string    `mapstructure:"xkey_private"`
+	XKeyPublic         string    `mapstructure:"xkey_public"`
+	Issuer             string    `mapstructure:"issuer"`
+	IssuerPrivate      string    `mapstructure:"issuer_private"`
 }
 
 type Config struct {
@@ -94,7 +98,8 @@ func Load() (*Config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	_ = viper.BindEnv("nats_auth.nats_url")
-
+	_ = viper.BindEnv("nats_auth.xkey_private")
+	_ = viper.BindEnv("nats_auth.issuer_private")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("failed to read config file: %w", err)

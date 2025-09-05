@@ -222,7 +222,7 @@ func Start(port string) error {
 	}
 	natsConn, err := nats.Connect(config.NatsAuth.NATSUrl, nats.UserInfo(config.NatsAuth.NATSApps[0].Username, config.NatsAuth.NATSApps[0].Password))
 	if err != nil {
-		log.Fatal("Failed to connect to nats")
+		log.Fatal("Failed to connect to nats: ", err)
 	}
 	log.Println("Connected to nats successfully")
 	serviceRegistryReqTimout := config.ServiceRegistry.RequestTimeout
