@@ -142,14 +142,9 @@ func (router *Router) doRequest(r *http.Request, h Handler, ctx context.Context)
 
 func (router *Router) handlerRequest(r *http.Request, h Handler, ctx context.Context) (*Response, error) {
 	returnValue, errFromAPI := router.doRequest(r, h, ctx)
-	fmt.Println("returnValue: ", returnValue)
 	responseBuilder := NewResponseBuilder(http.StatusOK).BuildHeader(r.Header)
 	if errFromAPI != nil {
 		return nil, errFromAPI
-	}
-
-	if returnValue == nil {
-		return responseBuilder.Build(), nil
 	}
 
 	switch returnType := returnValue.(type) {
