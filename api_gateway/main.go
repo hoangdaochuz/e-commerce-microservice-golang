@@ -19,47 +19,12 @@ type APIGateway struct {
 	server   *http.Server
 }
 
-func (gw *APIGateway) loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Printf("%s %s %v", r.Method, r.URL.Path, time.Since(start))
-	})
-}
-
-func (gw *APIGateway) corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (gw *APIGateway) contentTypeMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-	})
-}
-
-// func (gw *APIGateway) setupMiddleware() {
-// 	gw.router.Use(gw.loggingMiddleware, gw.corsMiddleware, gw.contentTypeMiddleware)
-// }
-
 func NewAPIGateway(natsConn *nats.Conn, serviceRegistryReqTimeout time.Duration, server *http.Server) *APIGateway {
 	gateway := &APIGateway{
 		natsConn: natsConn,
 		timeout:  30 * time.Second,
 		server:   server,
 	}
-	//Setup middleware for gateway
-	// gateway.setupMiddleware()
 	return gateway
 }
 
@@ -74,7 +39,6 @@ func (gw *APIGateway) sendErrorResponse(w http.ResponseWriter, err string, statu
 
 func (gw *APIGateway) writeResponse(w http.ResponseWriter, response custom_nats.Response) {
 	// Set default content type
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	// Copy headers from response but skip Content-Length
 	for key, items := range response.Headers {
@@ -126,6 +90,10 @@ func ServeHTTP(gw *APIGateway) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+func useMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
+	return MiddlewareChain(handler, middlewares...)
+}
+
 func Start(port string) (*APIGateway, error) {
 	fmt.Printf("Starting API Gateway in port %s\n", port)
 	config, err := configs.Load()
@@ -149,7 +117,21 @@ func Start(port string) (*APIGateway, error) {
 		return gateway
 	})
 
-	mux.HandleFunc("/", ServeHTTP(gateway))
+	// mux.HandleFunc("/", ServeHTTP(gateway))
+	rootHandler := http.HandlerFunc(ServeHTTP(gateway))
+	_ = useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware, LoggingMiddleware)
+	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware, AuthMiddleware, LoggingMiddleware)
+
+	healthCheckHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "healthy",
+		})
+	})
+	healthResourceHanlder := useMiddleware(healthCheckHandler, CorsMiddleware, ContentTypeMiddleware, LoggingMiddleware)
+
+	mux.Handle("/", protectResourceHandler)
+	mux.Handle("/health", healthResourceHanlder)
 
 	errChan := make(chan error, 1)
 
