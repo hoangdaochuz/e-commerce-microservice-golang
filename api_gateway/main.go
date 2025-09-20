@@ -5,38 +5,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"reflect"
 	"time"
 
-	"github.com/gorilla/mux"
-
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
+	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
-	serviceregistry "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/service-registry"
 	"github.com/nats-io/nats.go"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 type APIGateway struct {
-	router          *mux.Router
-	serviceRegistry *serviceregistry.ServiceRegistry
-	serviceRoutes   map[string]ServiceRoute
-	natsConn        *nats.Conn
-}
-
-type ServiceRoute struct {
-	ServiceName string
-	BasePath    string
-	Methods     map[string]MethodRoute
-}
-
-type MethodRoute struct {
-	HTTPMethod   string
-	Path         string
-	MethodName   string
-	RequestType  reflect.Type
-	ResponseType reflect.Type
+	natsConn *nats.Conn
+	timeout  time.Duration
+	server   *http.Server
 }
 
 func (gw *APIGateway) loggingMiddleware(next http.Handler) http.Handler {
@@ -68,69 +48,19 @@ func (gw *APIGateway) contentTypeMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (gw *APIGateway) setupMiddleware() {
-	gw.router.Use(gw.loggingMiddleware, gw.corsMiddleware, gw.contentTypeMiddleware)
-}
+// func (gw *APIGateway) setupMiddleware() {
+// 	gw.router.Use(gw.loggingMiddleware, gw.corsMiddleware, gw.contentTypeMiddleware)
+// }
 
-func NewAPIGateway(natsConn *nats.Conn, serviceRegistryReqTimeout time.Duration) *APIGateway {
+func NewAPIGateway(natsConn *nats.Conn, serviceRegistryReqTimeout time.Duration, server *http.Server) *APIGateway {
 	gateway := &APIGateway{
-		natsConn:        natsConn,
-		router:          mux.NewRouter(),
-		serviceRegistry: serviceregistry.NewServiceRegistry(natsConn, serviceRegistryReqTimeout),
-		serviceRoutes:   map[string]ServiceRoute{},
+		natsConn: natsConn,
+		timeout:  30 * time.Second,
+		server:   server,
 	}
 	//Setup middleware for gateway
-	gateway.setupMiddleware()
-	gateway.GetServiceAppsAndRegisterRouteMethod()
+	// gateway.setupMiddleware()
 	return gateway
-}
-
-func (gw *APIGateway) RegisterServiceWithAutoRoute(serviceName, basePath string, serviceImpl interface{}) error {
-
-	// register service's method to nats
-	if err := gw.serviceRegistry.RegistryOperationOfServices(serviceName, serviceImpl); err != nil {
-		return fmt.Errorf("failed to register service %s: %w", serviceName, err)
-	}
-
-	// auto config route of each method of service
-	routeConfig := serviceregistry.NewAutoRouteConfig(basePath)
-	routeConfig.DiscoveryRoutesFromService(serviceImpl, serviceName)
-
-	// register http route
-	return gw.RegisterServiceRouteWithConfig(serviceName, routeConfig)
-}
-
-func (gw *APIGateway) registerMethodRoute(serviceRoute *ServiceRoute, methodRoute MethodRoute) {
-	fullPath := serviceRoute.BasePath + methodRoute.Path
-
-	handler := gw.createMethodHandler(serviceRoute.ServiceName, methodRoute)
-	gw.router.HandleFunc(fullPath, handler).Methods(methodRoute.HTTPMethod)
-	log.Printf("Registered route: %s %s -> %s.%s\n",
-		methodRoute.HTTPMethod, fullPath, serviceRoute.ServiceName, methodRoute.MethodName)
-}
-
-func (gw *APIGateway) createMethodHandler(serviceName string, methodRoute MethodRoute) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// convert http request to proto.Message
-		protoReq, err := gw.buildRequestMessage(r, methodRoute)
-		if err != nil {
-			gw.sendErrorResponse(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		// call target service for this url
-		protoRes, errRes := gw.serviceRegistry.CallService(serviceName, methodRoute.MethodName, protoReq)
-		if errRes != nil {
-			gw.sendErrorResponse(w, errRes.Err, errRes.StatusCode)
-			return
-		}
-
-		if protoRes == nil {
-			gw.sendErrorResponse(w, "response not found", http.StatusNotFound)
-		}
-
-		// Convert protoRes (proto.Message) to HTTP Response json
-		gw.sendSuccessResponse(w, protoRes)
-	}
 }
 
 func (gw *APIGateway) sendErrorResponse(w http.ResponseWriter, err string, statusCode int) {
@@ -142,79 +72,61 @@ func (gw *APIGateway) sendErrorResponse(w http.ResponseWriter, err string, statu
 	json.NewEncoder(w).Encode(errResponse)
 }
 
-func (gw *APIGateway) sendSuccessResponse(w http.ResponseWriter, protoResponse proto.Message) {
-	w.Header().Set("Content-Type", "application/json")
-	// parse proto message to json
-	protoDataByte, err := protojson.Marshal(protoResponse)
-	if err != nil {
-		gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write(protoDataByte)
-	w.WriteHeader(http.StatusOK)
-}
+func (gw *APIGateway) writeResponse(w http.ResponseWriter, response custom_nats.Response) {
+	// Set default content type
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-func (gw *APIGateway) buildRequestMessage(r *http.Request, methodRoute MethodRoute) (proto.Message, error) {
-	reqPtr := reflect.New(methodRoute.RequestType.Elem())
-	req := reqPtr.Interface().(proto.Message)
-
-	// always POST method
-	return gw.parseBodyRequest(r, req)
-}
-
-func (gw *APIGateway) parseBodyRequest(r *http.Request, protoReq proto.Message) (proto.Message, error) {
-
-	vars := mux.Vars(r)
-
-	// parse r.Body to json
-	var jsonBody map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&jsonBody); err != nil {
-		return nil, fmt.Errorf("fail to decode json body: %w", err)
-	}
-	// merge path variable to body json
-	for key, val := range vars {
-		jsonBody[key] = val
-	}
-	// convert json body data to proto.Message
-	jsonByteData, err := json.Marshal(jsonBody)
-	if err != nil {
-		return nil, fmt.Errorf("faild to marshal json body")
-	}
-	err = protojson.Unmarshal(jsonByteData, protoReq)
-	if err != nil {
-		return nil, fmt.Errorf("faild to marshal to proto Message")
-	}
-	return protoReq, nil
-}
-
-func (gw *APIGateway) RegisterServiceRouteWithConfig(serviceName string, routeConfig serviceregistry.ServiceRouteConfig) error {
-	serviceRoute := ServiceRoute{
-		ServiceName: serviceName,
-		BasePath:    routeConfig.GetBasePath(),
-		Methods:     make(map[string]MethodRoute),
-	}
-
-	for methodName, method := range routeConfig.GetRoutes() {
-		methodRoute := MethodRoute{
-			HTTPMethod:   string(method.HTTPMethod),
-			Path:         method.PathPattern,
-			MethodName:   methodName,
-			RequestType:  method.RequestType,
-			ResponseType: method.ResponseType,
+	// Copy headers from response but skip Content-Length
+	for key, items := range response.Headers {
+		// Skip headers that should be handled by Go HTTP server
+		if key == "Content-Length" || key == "Transfer-Encoding" {
+			continue
 		}
-		serviceRoute.Methods[methodName] = methodRoute
-		gw.registerMethodRoute(&serviceRoute, methodRoute)
+		for _, v := range items {
+			w.Header().Add(key, v)
+		}
 	}
-	gw.serviceRoutes[serviceName] = serviceRoute
-	return nil
+	w.WriteHeader(response.StatusCode)
+	_, err := w.Write(response.Body)
+	if err != nil {
+		fmt.Println("fail to write response body: ", err)
+	}
 }
 
-// GetServiceRoutes returns the service routes for code generation
-func (gw *APIGateway) GetServiceRoutes() map[string]ServiceRoute {
-	return gw.serviceRoutes
+func ServeHTTP(gw *APIGateway) func(http.ResponseWriter, *http.Request) {
+	// Here is entry point for api gateway
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		natsReq, err := custom_nats.HttpRequestToNatsRequest(*r)
+		if err != nil {
+			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// natsSubject := natsReq.Subject
+		natsReqByte, err := json.Marshal(*natsReq)
+		if err != nil {
+			gw.sendErrorResponse(w, fmt.Errorf("fail to marshal nats request: %w", err).Error(), http.StatusInternalServerError)
+			return
+		}
+		msgResponse, err := gw.natsConn.Request(natsReq.Subject, natsReqByte, gw.timeout)
+		if err != nil {
+			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var natsResponse custom_nats.Response
+		err = json.Unmarshal(msgResponse.Data, &natsResponse)
+		if err != nil {
+			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		gw.writeResponse(w, natsResponse)
+	}
 }
 
-func Start(port string) error {
+func Start(port string) (*APIGateway, error) {
 	fmt.Printf("Starting API Gateway in port %s\n", port)
 	config, err := configs.Load()
 	if err != nil {
@@ -224,11 +136,43 @@ func Start(port string) error {
 	if err != nil {
 		log.Fatal("Failed to connect to nats: ", err)
 	}
+	// defer natsConn.Drain()
 	log.Println("Connected to nats successfully")
 	serviceRegistryReqTimout := config.ServiceRegistry.RequestTimeout
-	gateway := NewAPIGateway(natsConn, serviceRegistryReqTimout)
+	mux := http.NewServeMux()
+	apigatewayServer := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
+	}
+	gateway := NewAPIGateway(natsConn, serviceRegistryReqTimout, apigatewayServer)
 	di.Make(func() *APIGateway {
 		return gateway
 	})
-	return http.ListenAndServe(":"+port, gateway.router)
+
+	mux.HandleFunc("/", ServeHTTP(gateway))
+
+	errChan := make(chan error, 1)
+
+	go func() {
+		defer apigatewayServer.Close()
+		if err := apigatewayServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Println("API Gateway listen and serve fail")
+			errChan <- err
+		}
+	}()
+	select {
+	case e := <-errChan:
+		gateway.Stop()
+		return nil, e
+	default:
+		return gateway, nil
+	}
+}
+
+func (gw *APIGateway) Stop() error {
+	err := gw.server.Close()
+	if err != nil {
+		return err
+	}
+	return gw.natsConn.Drain()
 }

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	apigateway "github.com/hoangdaochuz/ecommerce-microservice-golang/api_gateway"
@@ -13,15 +14,15 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-func getServiceRoutesFromGateway(serviceRoutes *map[string]apigateway.ServiceRoute) error {
-	err := di.Resolve(func(gw *apigateway.APIGateway) error {
+// func getServiceRoutesFromGateway(serviceRoutes *map[string]apigateway.ServiceRoute) error {
+// 	err := di.Resolve(func(gw *apigateway.APIGateway) error {
 
-		*serviceRoutes = gw.GetServiceRoutes()
-		return nil
-	})
-	fmt.Println(err)
-	return err
-}
+// 		// *serviceRoutes = gw.GetServiceRoutes()
+// 		return nil
+// 	})
+// 	fmt.Println(err)
+// 	return err
+// }
 
 func setupAPIGateway() error {
 	configs, err := configs.Load()
@@ -33,7 +34,7 @@ func setupAPIGateway() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to nats")
 	}
-	gw := apigateway.NewAPIGateway(natsConn, configs.ServiceRegistry.RequestTimeout)
+	gw := apigateway.NewAPIGateway(natsConn, configs.ServiceRegistry.RequestTimeout, &http.Server{})
 	di.Make(func() *apigateway.APIGateway {
 		return gw
 	})
@@ -61,18 +62,17 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to setup api gateway for get service routes")
 	}
-	var serviceRoutes map[string]apigateway.ServiceRoute
-	err = getServiceRoutesFromGateway(&serviceRoutes)
-	if err != nil {
-		log.Fatal("failed to get service routes from api gateway")
-	}
+	// err = getServiceRoutesFromGateway(&serviceRoutes)
+	// if err != nil {
+	// 	log.Fatal("failed to get service routes from api gateway")
+	// }
 	// var _serviceName string
 	// if serviceName == nil {
 	// 	_serviceName = ""
 	// }else{
 	// 	_serviceName = *serviceName
 	// }
-	frontendCodeGenerator := codegen.NewFrontendGenerator(*ourDir, *baseURL, *serviceName, serviceRoutes)
+	frontendCodeGenerator := codegen.NewFrontendGenerator(*ourDir, *baseURL, *serviceName)
 	err = frontendCodeGenerator.GenerateAllFECode()
 	if err != nil {
 		log.Fatal("failed while generate code frontend : %w", err)

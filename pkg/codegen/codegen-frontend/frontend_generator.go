@@ -6,16 +6,13 @@ import (
 	"path/filepath"
 	"text/template"
 	"time"
-
-	apigateway "github.com/hoangdaochuz/ecommerce-microservice-golang/api_gateway"
 )
 
 // FrontendGenerator generates TypeScript/React Query code
 type FrontendGenerator struct {
-	outDir        string
-	baseURL       string
-	serviceName   string
-	serviceRoutes map[string]apigateway.ServiceRoute
+	outDir      string
+	baseURL     string
+	serviceName string
 }
 
 type CodeGenConstant struct {
@@ -28,17 +25,16 @@ type MethodConstantData struct {
 	MethodConstantName string
 }
 
-func NewFrontendGenerator(outDir, baseURL, serviceName string, serviceRoutes map[string]apigateway.ServiceRoute) *FrontendGenerator {
+func NewFrontendGenerator(outDir, baseURL, serviceName string) *FrontendGenerator {
 	return &FrontendGenerator{
-		outDir:        outDir,
-		baseURL:       baseURL,
-		serviceName:   serviceName,
-		serviceRoutes: serviceRoutes,
+		outDir:      outDir,
+		baseURL:     baseURL,
+		serviceName: serviceName,
 	}
 }
 
-func (fg *FrontendGenerator) AddServiceRoutes(serviceName string, serviceRoutes apigateway.ServiceRoute) {
-	fg.serviceRoutes[serviceName] = serviceRoutes
+func (fg *FrontendGenerator) AddServiceRoutes(serviceName string) {
+	// fg.serviceRoutes[serviceName] = serviceRoutes
 }
 
 func (fg *FrontendGenerator) GenerateAllFECode() error {
@@ -54,11 +50,11 @@ func (fg *FrontendGenerator) GenerateAllFECode() error {
 
 	if fg.serviceName == "" {
 		// gen all fe code for all service
-		for serviceName, _ := range fg.serviceRoutes {
-			if err := fg.generateCodeForSpecificService(serviceName); err != nil {
-				return fmt.Errorf("failed to generated frontend code for service %s", serviceName)
-			}
-		}
+		// for serviceName, _ := range fg.serviceRoutes {
+		// 	if err := fg.generateCodeForSpecificService(serviceName); err != nil {
+		// 		return fmt.Errorf("failed to generated frontend code for service %s", serviceName)
+		// 	}
+		// }
 	} else {
 		if err := fg.generateCodeForSpecificService(fg.serviceName); err != nil {
 			return fmt.Errorf("failed to generated frontend code for service %s", fg.serviceName)
@@ -101,7 +97,7 @@ export const {{.MethodConstantName}} = "{{.FullPath}}";
 
 	data := CodeGenConstant{
 		Timestamp: time.Now().Format("2006-01-02 15:04:05"),
-		Methods:   fg.buildMethodConstantData(fg.serviceRoutes[serviceName]),
+		// Methods:   fg.buildMethodConstantData(fg.serviceRoutes[serviceName]),
 	}
 	return fg.writeTemplateToFile("constant.ts", templateConstant, data, serviceName)
 }
@@ -126,16 +122,16 @@ func (fg *FrontendGenerator) writeTemplateToFile(filename, templateString string
 	return err
 }
 
-func (fg *FrontendGenerator) buildMethodConstantData(serviceRoutes apigateway.ServiceRoute) []MethodConstantData {
-	var methods []MethodConstantData
-	for methodName, methodInfo := range serviceRoutes.Methods {
-		methods = append(methods, MethodConstantData{
-			FullPath:           serviceRoutes.BasePath + methodInfo.Path,
-			MethodConstantName: fg.buildMethodConstantName(serviceRoutes.ServiceName, methodName),
-		})
-	}
-	return methods
-}
+// func (fg *FrontendGenerator) buildMethodConstantData(serviceRoutes apigateway.ServiceRoute) []MethodConstantData {
+// 	var methods []MethodConstantData
+// 	for methodName, methodInfo := range serviceRoutes.Methods {
+// 		methods = append(methods, MethodConstantData{
+// 			FullPath:           serviceRoutes.BasePath + methodInfo.Path,
+// 			MethodConstantName: fg.buildMethodConstantName(serviceRoutes.ServiceName, methodName),
+// 		})
+// 	}
+// 	return methods
+// }
 
 func (fg *FrontendGenerator) buildMethodConstantName(serviceName, methodName string) string {
 	return fmt.Sprintf("%s_%s_URL", serviceName, methodName)

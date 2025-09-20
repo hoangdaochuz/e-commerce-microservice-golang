@@ -80,6 +80,7 @@ tasks:
     deps:
       - task: backend:api_gateway
         on_success: backend:order
+      - task: backend:order
   backend:api_gateway:
     desc: Run api gateway service
     cmds:
