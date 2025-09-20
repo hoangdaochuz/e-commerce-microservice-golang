@@ -1,1 +1,9 @@
 .env
+
+# Process files
+.pids/
+pid.txt
+
+# Built binaries
+cmd/main
+apps/*/cmd/main

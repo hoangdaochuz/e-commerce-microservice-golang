@@ -74,6 +74,8 @@ tasks:
   backend:dev:
     desc: Run backend development server
     cmds:
+      - rm -f pid.txt *.log
+      - echo "# Backend Services PIDs" > pid.txt
       - task: go_apps
 
   go_apps:
@@ -86,10 +88,22 @@ tasks:
     cmds:
       - |
         go build -o cmd/main cmd/main.go
-        ./cmd/main
+        echo "Starting API Gateway..."
+        ./cmd/main &
+        sleep 1
+        API_PID=$(pgrep -f "^./cmd/main$")
+        echo "api_gateway:$API_PID" >> pid.txt
+        echo "API Gateway started with PID: $API_PID"
+        wait
   backend:order:
     desc: Run order service
     cmds:
       - |
         go build -o apps/order/cmd/main apps/order/cmd/main.go
-        ./apps/order/cmd/main
+        echo "Starting Order service..."
+        ./apps/order/cmd/main &
+        sleep 1
+        ORDER_PID=$(pgrep -f "^./apps/order/cmd/main$")
+        echo "order:$ORDER_PID" >> pid.txt
+        echo "Order service started with PID: $ORDER_PID"
+        wait
