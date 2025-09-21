@@ -10,7 +10,6 @@ import (
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
-	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
@@ -20,15 +19,18 @@ type APIGateway struct {
 	natsConn *nats.Conn
 	timeout  time.Duration
 	server   *http.Server
+	mux      *http.ServeMux
+	ctx      context.Context
 	// ctx      context.Context
 }
 
-func NewAPIGateway(natsConn *nats.Conn, serviceRegistryReqTimeout time.Duration, server *http.Server) *APIGateway {
+func NewAPIGateway(natsConn *nats.Conn, server *http.Server, mux *http.ServeMux, ctx context.Context) *APIGateway {
 	gateway := &APIGateway{
 		natsConn: natsConn,
 		timeout:  30 * time.Second,
 		server:   server,
-		// ctx:      ctx,
+		mux:      mux,
+		ctx:      ctx,
 	}
 	return gateway
 }
@@ -62,7 +64,7 @@ func (gw *APIGateway) writeResponse(w http.ResponseWriter, response custom_nats.
 	}
 }
 
-func ServeHTTP(gw *APIGateway) func(http.ResponseWriter, *http.Request) {
+func (gw *APIGateway) ServeHTTP() func(http.ResponseWriter, *http.Request) {
 	// Here is entry point for api gateway
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -99,41 +101,22 @@ func useMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.
 	return MiddlewareChain(handler, middlewares...)
 }
 
-func Start(port string) (*APIGateway, error) {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	ctx := context.Background()
-	// ctxWithValue := context.WithValue(ctx, "user", "khai") // for test, update later
-
-	fmt.Printf("Starting API Gateway in port %s\n", port)
+func (gw *APIGateway) Start() error {
+	fmt.Printf("Starting API Gateway in port %s\n", gw.server.Addr)
 	config, err := configs.Load()
 	if err != nil {
 		log.Fatal("failed to load configuration: %w", err)
+		return err
 	}
-	natsConn, err := nats.Connect(config.NatsAuth.NATSUrl, nats.UserInfo(config.NatsAuth.NATSApps[0].Username, config.NatsAuth.NATSApps[0].Password))
-	if err != nil {
-		log.Fatal("Failed to connect to nats: ", err)
-	}
-	log.Println("Connected to nats successfully")
-	serviceRegistryReqTimout := config.ServiceRegistry.RequestTimeout
-	mux := http.NewServeMux()
-	apigatewayServer := &http.Server{
-		Addr:    ":" + port,
-		Handler: mux,
-	}
+
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: config.Redis.Address + ":" + config.Redis.Port,
 	})
-	rateLimiter := ratelimiter.NewRateLimiter(redisClient, 50, 1*time.Minute, ctx)
-
-	gateway := NewAPIGateway(natsConn, serviceRegistryReqTimout, apigatewayServer)
-	di.Make(func() *APIGateway {
-		return gateway
-	})
-
-	rootHandler := http.HandlerFunc(ServeHTTP(gateway))
+	defer redisClient.Close()
+	rateLimiter := ratelimiter.NewRateLimiter(redisClient, 50, 1*time.Minute, gw.ctx)
+	rootHandler := http.HandlerFunc(gw.ServeHTTP())
 	_ = useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), LoggingMiddleware)
 	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), AuthMiddleware, LoggingMiddleware)
-
 	healthCheckHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -141,28 +124,21 @@ func Start(port string) (*APIGateway, error) {
 		})
 	})
 	healthResourceHanlder := useMiddleware(healthCheckHandler, CorsMiddleware, ContentTypeMiddleware, LoggingMiddleware)
-
-	mux.Handle("/", protectResourceHandler)
-	mux.Handle("/health", healthResourceHanlder)
-
+	gw.mux.Handle("/", protectResourceHandler)
+	gw.mux.Handle("/health", healthResourceHanlder)
 	errChan := make(chan error, 1)
 
 	go func() {
-		defer apigatewayServer.Close()
-		if err := apigatewayServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		defer gw.server.Close()
+		if err := gw.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Println("API Gateway listen and serve fail")
 			errChan <- err
 		}
 	}()
-	select {
-	case e := <-errChan:
-		gateway.Stop()
-		// cancel()
-		return nil, e
-	default:
-		// cancel()
-		return gateway, nil
-	}
+
+	err = <-errChan
+	gw.Stop()
+	return fmt.Errorf("api gateway listen and serve fail: %w", err)
 }
 
 func (gw *APIGateway) Stop() error {

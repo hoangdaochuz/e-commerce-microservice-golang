@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -34,7 +35,7 @@ func setupAPIGateway() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to nats")
 	}
-	gw := apigateway.NewAPIGateway(natsConn, configs.ServiceRegistry.RequestTimeout, &http.Server{})
+	gw := apigateway.NewAPIGateway(natsConn, &http.Server{}, http.NewServeMux(), context.Background())
 	di.Make(func() *apigateway.APIGateway {
 		return gw
 	})
