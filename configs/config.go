@@ -37,11 +37,17 @@ type NATSAuth struct {
 	IssuerPrivate      string    `mapstructure:"issuer_private"`
 }
 
+type Redis struct {
+	Address string `mapstructure:"address"`
+	Port    string `mapstructure:"port"`
+}
+
 type Config struct {
 	ServiceRegistry ServiceRegistryConfig `mapstructure:"service_registry"`
 	Apigateway      ApigatewayConfig      `mapstructure:"apigateway"`
 	OrderDatabase   OrderDatabase         `mapstructure:"order_database"`
 	NatsAuth        NATSAuth              `mapstructure:"nats_auth"`
+	Redis           Redis                 `mapstructure:"redis"`
 	// Database --> Later
 	// Log --> Later
 }

@@ -25,3 +25,6 @@ order_database:
   user: "postgres"
   password: "postgres"
   dbname: "order"
+redis:
+  address: "localhost"
+  port: "6379"

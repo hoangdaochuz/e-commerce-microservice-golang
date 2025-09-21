@@ -1,6 +1,7 @@
 package apigateway
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,13 +11,16 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
 	"github.com/nats-io/nats.go"
+	"github.com/redis/go-redis/v9"
 )
 
 type APIGateway struct {
 	natsConn *nats.Conn
 	timeout  time.Duration
 	server   *http.Server
+	// ctx      context.Context
 }
 
 func NewAPIGateway(natsConn *nats.Conn, serviceRegistryReqTimeout time.Duration, server *http.Server) *APIGateway {
@@ -24,6 +28,7 @@ func NewAPIGateway(natsConn *nats.Conn, serviceRegistryReqTimeout time.Duration,
 		natsConn: natsConn,
 		timeout:  30 * time.Second,
 		server:   server,
+		// ctx:      ctx,
 	}
 	return gateway
 }
@@ -95,6 +100,10 @@ func useMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.
 }
 
 func Start(port string) (*APIGateway, error) {
+	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx := context.Background()
+	// ctxWithValue := context.WithValue(ctx, "user", "khai") // for test, update later
+
 	fmt.Printf("Starting API Gateway in port %s\n", port)
 	config, err := configs.Load()
 	if err != nil {
@@ -104,7 +113,6 @@ func Start(port string) (*APIGateway, error) {
 	if err != nil {
 		log.Fatal("Failed to connect to nats: ", err)
 	}
-	// defer natsConn.Drain()
 	log.Println("Connected to nats successfully")
 	serviceRegistryReqTimout := config.ServiceRegistry.RequestTimeout
 	mux := http.NewServeMux()
@@ -112,15 +120,19 @@ func Start(port string) (*APIGateway, error) {
 		Addr:    ":" + port,
 		Handler: mux,
 	}
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: config.Redis.Address + ":" + config.Redis.Port,
+	})
+	rateLimiter := ratelimiter.NewRateLimiter(redisClient, 50, 1*time.Minute, ctx)
+
 	gateway := NewAPIGateway(natsConn, serviceRegistryReqTimout, apigatewayServer)
 	di.Make(func() *APIGateway {
 		return gateway
 	})
 
-	// mux.HandleFunc("/", ServeHTTP(gateway))
 	rootHandler := http.HandlerFunc(ServeHTTP(gateway))
-	_ = useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware, LoggingMiddleware)
-	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware, AuthMiddleware, LoggingMiddleware)
+	_ = useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), LoggingMiddleware)
+	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), AuthMiddleware, LoggingMiddleware)
 
 	healthCheckHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -145,8 +157,10 @@ func Start(port string) (*APIGateway, error) {
 	select {
 	case e := <-errChan:
 		gateway.Stop()
+		// cancel()
 		return nil, e
 	default:
+		// cancel()
 		return gateway, nil
 	}
 }
