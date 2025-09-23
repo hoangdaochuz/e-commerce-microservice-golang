@@ -73,6 +73,9 @@ func (gw *APIGateway) ServeHTTP() func(http.ResponseWriter, *http.Request) {
 			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		// Add necessary infomation to header for updating to context and use it if we need
+		natsReq.AddHeader("X-User-Id", "test@1234")
+		// continue add if we want
 
 		// natsSubject := natsReq.Subject
 		natsReqByte, err := json.Marshal(*natsReq)

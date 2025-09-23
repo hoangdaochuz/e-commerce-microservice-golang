@@ -25,6 +25,15 @@ func NewRequest(header map[string][]string, method, url, subject string, body []
 	}
 }
 
+func (r *Request) AddHeader(key, value string) {
+	_, ok := r.Header[key]
+	if ok {
+		r.Header[key] = append(r.Header[key], value)
+	} else {
+		r.Header[key] = []string{value}
+	}
+}
+
 func buildNatsSubjectFromPath(path string) string {
 	splits := strings.Split(path, "/")
 	var subject string

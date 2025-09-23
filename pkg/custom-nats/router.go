@@ -168,6 +168,14 @@ func (router *Router) handlerRequest(r *http.Request, h Handler, ctx context.Con
 func (router *Router) RegisterRoute(method, path string, h Handler) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		// additional info to context
+		// We will build context here
+		// 1: Get from header
+		userId := r.Header.Get("X-User-Id")
+		if userId != "" {
+			ctx = context.WithValue(ctx, "userId", userId)
+		}
+
 		res, err := router.handlerRequest(r, h, ctx)
 		if err != nil {
 			w.Header().Set("Content-type", "application/json; charset=utf-8")
