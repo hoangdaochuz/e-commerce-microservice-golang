@@ -8,24 +8,25 @@ import (
 
 const (
 	NATS_SUBJECT          = "/api/v1/order"
-	ORDER_CREATE_ORDER    = NATS_SUBJECT + "/CreateOrder"
+	ORDER_CREATE_ORDER = NATS_SUBJECT + "/CreateOrder"
 	ORDER_GET_ORDER_BY_ID = NATS_SUBJECT + "/GetOrderById"
 )
 
-type OrderService interface {
+type OrderServiceInterface interface {
 	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error)
 	GetOrderById(ctx context.Context, req *GetOrderByIdRequest) (*OrderResponse, error)
 }
 
 type OrderServiceProxy struct {
-	service OrderService
+	service OrderServiceInterface
 }
 
-func NewOrderServiceProxy(service OrderService) *OrderServiceProxy {
+func NewOrderServiceProxy(service OrderServiceInterface) *OrderServiceProxy {
 	return &OrderServiceProxy{
 		service: service,
 	}
 }
+
 
 func (o *OrderServiceProxy) CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error) {
 	return o.service.CreateOrder(ctx, req)
@@ -34,6 +35,7 @@ func (o *OrderServiceProxy) CreateOrder(ctx context.Context, req *CreateOrderReq
 func (o *OrderServiceProxy) GetOrderById(ctx context.Context, req *GetOrderByIdRequest) (*OrderResponse, error) {
 	return o.service.GetOrderById(ctx, req)
 }
+
 
 type OrderServiceRouter struct {
 	proxy *OrderServiceProxy

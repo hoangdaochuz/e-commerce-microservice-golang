@@ -1,0 +1,50 @@
+package {{.Package}}
+
+import (
+	"context"
+
+	custom_nats "{{.ImportPath}}"
+)
+
+const (
+	NATS_SUBJECT{{range $i, $method := .Methods}}{{if eq $i 0}}          = "{{$.NatsSubject}}"{{end}}
+	{{$method.ConstantName}} = NATS_SUBJECT + "/{{$method.Name}}"{{end}}
+)
+
+type {{.ServiceName}}Interface interface {
+{{- range .Methods}}
+	{{.Name}}(ctx context.Context, req *{{.RequestType}}) (*{{.ResponseType}}, error)
+{{- end}}
+}
+
+type {{.ServiceName}}Proxy struct {
+	service {{.ServiceName}}Interface
+}
+
+func New{{.ServiceName}}Proxy(service {{.ServiceName}}Interface) *{{.ServiceName}}Proxy {
+	return &{{.ServiceName}}Proxy{
+		service: service,
+	}
+}
+
+{{range .Methods}}
+func (o *{{$.ServiceName}}Proxy) {{.Name}}(ctx context.Context, req *{{.RequestType}}) (*{{.ResponseType}}, error) {
+	return o.service.{{.Name}}(ctx, req)
+}
+{{end}}
+
+type {{.ServiceName}}Router struct {
+	proxy *{{.ServiceName}}Proxy
+}
+
+func New{{.ServiceName}}Router(proxy *{{.ServiceName}}Proxy) *{{.ServiceName}}Router {
+	return &{{.ServiceName}}Router{
+		proxy: proxy,
+	}
+}
+
+func (o *{{.ServiceName}}Router) Register(natsRouter custom_nats.Router) {
+{{- range .Methods}}
+	natsRouter.RegisterRoute("POST", {{.ConstantName}}, o.proxy.{{.Name}})
+{{- end}}
+}
