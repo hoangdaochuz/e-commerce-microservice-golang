@@ -41,6 +41,9 @@ type MethodData struct {
 	ConstantName string
 }
 
+// TODO:
+// - [ ] Generate .d.go for multiple services
+
 // GenerateFromProto generates a .d.go file from a .proto file
 func (g *DGoGenerator) GenerateFromProto(protoPath, outputPath string) error {
 	// Parse the proto file

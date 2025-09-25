@@ -157,5 +157,11 @@ go run cmd/api_gateway/main.go
 ```
 
 
+```
 go run cmd/api_gateway/main.go
+```
+
+## How to generate .pb.go from .proto file
+```
+task backend:codegen -- apps/order/proto/order.proto
 ```

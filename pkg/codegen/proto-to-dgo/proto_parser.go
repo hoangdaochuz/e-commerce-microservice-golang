@@ -8,6 +8,21 @@ import (
 	"strings"
 )
 
+// TODO:
+// - [ ] About repeated fields for array
+// - [ ] About enum fields
+// - [ ] About imports
+// - [ ] About empty response/ noresponse rpc method
+// - [ ] About optional fields
+// - [ ] About require fields
+
+// ---------------------------
+// - [ ] About oneof fields -- low priority
+// - [ ] About map fields
+// - [ ] About default values
+// - [ ] About reserved fields -- low priority
+// - [ ] About extensions
+
 // ProtoService represents a gRPC service definition
 type ProtoService struct {
 	Name    string
