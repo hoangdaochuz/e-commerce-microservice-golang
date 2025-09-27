@@ -7,3 +7,6 @@ pid.txt
 # Built binaries
 cmd/main
 apps/*/cmd/main
+
+# Generated code
+gen

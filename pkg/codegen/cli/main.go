@@ -1,18 +1,13 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
-	apigateway "github.com/hoangdaochuz/ecommerce-microservice-golang/api_gateway"
-	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/codegen/codegen-frontend"
-	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
-	"github.com/nats-io/nats.go"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/codegen/proto2dgo"
 )
 
 // func getServiceRoutesFromGateway(serviceRoutes *map[string]apigateway.ServiceRoute) error {
@@ -25,58 +20,48 @@ import (
 // 	return err
 // }
 
-func setupAPIGateway() error {
-	configs, err := configs.Load()
-	if err != nil {
-		fmt.Errorf("failed to load config value %w", err)
-	}
-	natsUrl := fmt.Sprintf("nats://%s:%s@localhost:4222", configs.NatsAuth.NATSApps[0].Username, configs.NatsAuth.NATSApps[0].Password)
-	natsConn, err := nats.Connect(natsUrl)
-	if err != nil {
-		return fmt.Errorf("failed to connect to nats")
-	}
-	gw := apigateway.NewAPIGateway(natsConn, &http.Server{}, http.NewServeMux(), context.Background())
-	di.Make(func() *apigateway.APIGateway {
-		return gw
-	})
-	return nil
+func handleGenGoContractFile(protoFile, outputFile string) error {
+	generater := proto2dgo.NewProto2dgoGenerater()
+	return generater.GenerateProto2Dgo(protoFile, outputFile)
+}
+
+func handleGenFECode(ourDir, baseURL, serviceName string) error {
+	frontendCodeGenerator := codegen.NewFrontendGenerator(ourDir, baseURL, serviceName)
+	return frontendCodeGenerator.GenerateAllFECode()
+
 }
 
 func main() {
 	var (
-		ourDir      = flag.String("outdir", "./frontend/apis", "Output directory for generated frontend code")
-		baseURL     = flag.String("baseurl", "http://localhost:8080", "Base URL for API endpoints")
-		serviceName = flag.String("service", "", "service name for generated code, if this field has not been set, it will generated frontend code for all service")
-		help        = flag.Bool("help", false, "Show help message")
+		// ourDir        = flag.String("outdir", "./frontend/apis", "Output directory for generated frontend code")
+		// baseURL       = flag.String("baseurl", "http://localhost:8080", "Base URL for API endpoints")
+		// serviceName   = flag.String("service", "", "service name for generated code, if this field has not been set, it will generated frontend code for all service")
+		help          = flag.Bool("help", false, "Show help message")
+		genType       = flag.String("type", "", "Code gen type (ex. backend-contract, fronend)")
+		dgoOutput     = flag.String("dgoOutput", "", "Generated file has name and place at")
+		protofilePath = flag.String("protofilePath", "", "Path to proto file need for generating contract go code")
 	)
 
 	flag.Parse() // this help cli read the argument
 	if *help {
-		fmt.Println("Frontend Code Generator")
-		fmt.Println("Useage: go run pkg/codegen/cli/main.go [options]")
+		fmt.Println("Go Contract Generator")
+		// fmt.Println("Useage: go run pkg/codegen/cli/main.go [options]")
 		fmt.Println("\nOptions:\n")
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
-	di.InitDIContainer()
-	err := setupAPIGateway()
-	if err != nil {
-		log.Fatal("failed to setup api gateway for get service routes")
-	}
-	// err = getServiceRoutesFromGateway(&serviceRoutes)
-	// if err != nil {
-	// 	log.Fatal("failed to get service routes from api gateway")
-	// }
-	// var _serviceName string
-	// if serviceName == nil {
-	// 	_serviceName = ""
-	// }else{
-	// 	_serviceName = *serviceName
-	// }
-	frontendCodeGenerator := codegen.NewFrontendGenerator(*ourDir, *baseURL, *serviceName)
-	err = frontendCodeGenerator.GenerateAllFECode()
-	if err != nil {
-		log.Fatal("failed while generate code frontend : %w", err)
+
+	if *genType == "backend-contract" {
+		err := handleGenGoContractFile(*protofilePath, *dgoOutput)
+		if err != nil {
+			log.Fatal("failed while generating contract go code from proto file")
+		}
+	} else {
+		// Implement later
+		// err := handleGenFECode(*ourDir, *baseURL, *serviceName)
+		// if err != nil {
+		// 	log.Fatal("failed while generating fe code")
+		// }
 	}
 	fmt.Println("🌈✅ Generated frontend code successfully")
 }

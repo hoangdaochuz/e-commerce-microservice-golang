@@ -22,6 +22,25 @@ tasks:
           --go_out="$OUT_DIR" --go_opt=paths=source_relative \
           --go-grpc_out="$OUT_DIR" --go-grpc_opt=paths=source_relative \
           {{.PROTO_FILE}}
+
+  backend:codegen:dgo:
+    desc: Generate .d.go file from proto file
+    vars:
+      PROTO_FILE: "{{.CLI_ARGS}}"
+    cmds:
+      - |
+        if [ -z "{{.PROTO_FILE}}" ]; then
+          echo "Error: Please provide proto file path"
+          echo "Usage: task backend:codegen:dgo -- apps/order/proto/order.proto"
+          exit 1
+        fi
+        echo "Generating .d.go from {{.PROTO_FILE}}"
+        SERVICE_DIR=$(echo {{.PROTO_FILE}} | cut -d'/' -f2)
+        FILE_NAME=$(basename {{.PROTO_FILE}} .proto)
+        OUT_FILE="apps/$SERVICE_DIR/api/$FILE_NAME/$FILE_NAME.d.go"
+        go run pkg/codegen/cli/main.go -type=backend-contract -protofilePath={{.PROTO_FILE}} -dgoOutput="$OUT_FILE"
+        echo "Generated: $OUT_FILE"
+  
   frontend:codegen:service:
     desc: Generate TypeScript/React Query code frontend for specific service
     vars:
