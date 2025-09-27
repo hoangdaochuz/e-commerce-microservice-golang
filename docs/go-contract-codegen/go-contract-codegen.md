@@ -28,13 +28,23 @@ The generator parses `.proto` files and generates Go code that provides a clean 
 The easiest way to generate contract code is using the task runner:
 
 ```bash
-task backend:codegen:service PROTO_FILE=apps/order/proto/order.proto
+# Using default output location
+task backend:codegen:dgo -- apps/order/proto/order.proto
+
+# Using custom output file
+task backend:codegen:dgo OUT_FILE=custom/path/my_contract.d.go -- apps/order/proto/order.proto
 ```
 
 This command will:
 1. Parse the specified proto file
-2. Generate the contract file at `apps/{service}/api/{service}/{service}.d.go`
+2. Generate the contract file at the specified location (or default `apps/{service}/api/{service}/{service}.d.go`)
 3. Create all necessary interfaces, proxies, and routers
+
+#### Usage Options:
+
+- **Default output**: The tool automatically determines the output path based on the proto file structure
+- **Custom output**: Use `OUT_FILE=path/to/your/file.d.go` to specify a custom output location
+- The tool will automatically create the output directory if it doesn't exist
 
 ### Via CLI Tool
 
