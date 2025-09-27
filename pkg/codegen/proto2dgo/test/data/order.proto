@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "order/api/order";
+import "example/abc.proto";
+import public "example/test.proto";
+
+enum OrderStatus{
+  FAIL = 0;
+  PENDING = 1;
+  SUCCESS = 2;
+}
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrderById(GetOrderByIdRequest) returns (OrderResponse);
+}
+
+message GetOrderByIdRequest {
+  string Id = 1;
+}
+
+message OrderResponse {
+  string Id = 1;
+  string Name = 2;
+}
+
+message CreateOrderRequest {
+  string customer_id = 1;
+}
+
+message CreateOrderResponse {
+  string order_id = 1;
+}
+
+message TestMessage {
+  repeated string test = 1;
+  optional bool isOptional = 2;
+  string stringField  = 3;
+  test.TestItem importFields = 4;
+  CreateOrderRequest request = 5;
+}

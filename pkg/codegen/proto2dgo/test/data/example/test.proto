@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package test;
+
+option go_package = "test/api/test";
+
+
+
+message TestItem {
+  string Id = 1;
+  string Name = 2;
+}
+
+service TestService {
+  rpc GetTestItem(GetTestItemRequest) returns (TestItem);
+}
+
+message GetTestItemRequest {
+  string Id = 1;
+}

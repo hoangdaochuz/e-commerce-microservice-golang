@@ -1,0 +1,7 @@
+syntax = "proto3";
+package abc;
+option go_package = "abc/api/abc";
+
+message Hello {
+  string name = 1;
+}
