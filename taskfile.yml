@@ -36,7 +36,7 @@ tasks:
           exit 1
         fi
         echo "Generating .d.go from {{.PROTO_FILE}}"
-        
+
         if [ -n "{{.OUT_FILE}}" ]; then
           OUT_FILE="{{.OUT_FILE}}"
           echo "Using user-specified output file: $OUT_FILE"
@@ -46,13 +46,13 @@ tasks:
           OUT_FILE="apps/$SERVICE_DIR/api/$FILE_NAME/$FILE_NAME.d.go"
           echo "Using default output file: $OUT_FILE"
         fi
-        
+
         # Create output directory if it doesn't exist
         mkdir -p "$(dirname "$OUT_FILE")"
-        
+
         go run pkg/codegen/cli/main.go -type=backend-contract -protofilePath={{.PROTO_FILE}} -dgoOutput="$OUT_FILE"
         echo "Generated: $OUT_FILE"
-  
+
   frontend:codegen:service:
     desc: Generate TypeScript/React Query code frontend for specific service
     vars:
@@ -112,6 +112,8 @@ tasks:
   go_apps:
     deps:
       - task: backend:api_gateway
+        on_success: backend:authenticate
+      - task: backend:authenticate
         on_success: backend:order
       - task: backend:order
   backend:api_gateway:
@@ -137,4 +139,16 @@ tasks:
         ORDER_PID=$(pgrep -f "^./apps/order/cmd/main$")
         echo "order:$ORDER_PID" >> pid.txt
         echo "Order service started with PID: $ORDER_PID"
+        wait
+  backend:authenticate:
+    desc: Run authenticate service
+    cmds:
+      - |
+        go build -o apps/auth/cmd/main apps/auth/cmd/main.go
+        echo "Starting authenticate service..."
+        ./apps/auth/cmd/main &
+        sleep 1
+        AUTH_PID=$(pgrep -f "^./apps/auth/cmd/main$")
+        echo "auth:$AUTH_PID" >> pid.txt
+        echo "Auth service started with PID: $AUTH_PID"
         wait

@@ -1,0 +1,46 @@
+syntax = "proto3";
+package auth;
+option go_package = "auth/api/auth";
+
+message LoginRequest {
+  string Username = 1;
+}
+
+message LoginResponse {
+  bool IsSuccess  = 1;
+}
+
+enum AuthorizationEnpointError {
+  invalid_request = 0;
+  invalid_scope = 1;
+  unauthorized_client = 2;
+  unsupported_response_type = 3;
+  server_error = 4;
+  interaction_required = 5;
+  login_required = 6;
+}
+
+message CallbackRequest {
+  string Code = 1;
+  string State = 2;
+  AuthorizationEnpointError Error = 3;
+  string ErrorDescription = 4;
+}
+
+message CallbackResponse {
+  bool IsSuccess = 1;
+}
+
+message ValidateTokenRequest {
+  string Token = 1;
+}
+message ValidateTokenResponse {
+  bool IsValid = 1;
+  // return other info
+}
+
+service AuthenticateService {
+  rpc Login(LoginRequest) returns(LoginResponse);
+  rpc Callback(CallbackRequest) returns(CallbackResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns(ValidateTokenResponse);
+}

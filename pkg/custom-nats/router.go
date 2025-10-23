@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/shared"
 )
 
 type (
@@ -167,13 +168,14 @@ func (router *Router) handlerRequest(r *http.Request, h Handler, ctx context.Con
 
 func (router *Router) RegisterRoute(method, path string, h Handler) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		ctx := context.WithValue(r.Context(), shared.HTTPRequest_ContextKey, r)
+		ctx = context.WithValue(ctx, shared.HTTPResponse_ContextKey, w)
 		// additional info to context
 		// We will build context here
 		// 1: Get from header
 		userId := r.Header.Get("X-User-Id")
 		if userId != "" {
-			ctx = context.WithValue(ctx, "userId", userId)
+			ctx = context.WithValue(ctx, shared.UserId_ContextKey, userId)
 		}
 
 		res, err := router.handlerRequest(r, h, ctx)

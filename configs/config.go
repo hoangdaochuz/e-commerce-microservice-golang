@@ -40,6 +40,25 @@ type NATSAuth struct {
 type Redis struct {
 	Address string `mapstructure:"address"`
 	Port    string `mapstructure:"port"`
+	MaxIdle int    `mapstructure:"max_idle"`
+}
+
+type ZitadelConfigs struct {
+	ClientId              string `mapstructure:"client_id"`
+	RedirectURI           string `mapstructure:"redirect_uri"`
+	AuthorizationEndpoint string `mapstructure:"authorization_endpoint"`
+	EndSessionEndpoint    string `mapstructure:"endsession_endpoint"`
+	IntrospectionEndpoint string `mapstructure:"introspection_endpoint"`
+	TokenEndpoint         string `mapstructure:"token_endpoint"`
+	UserInfoEndpoint      string `mapstructure:"userinfo_endpoint"`
+	ApiKeyBase64          string `mapstructure:"api_key_base64"`
+	AuthDomain            string `mapstructure:"auth_domain"`
+	EncryptKey            string `mapstructure:"encrypt_key"`
+}
+
+type AuthToken struct {
+	RsaKeyPairFilePath   string `mapstructure:"rsa_key_pair_file_path"`
+	RsaPublicKeyFilePath string `mapstructure:"rsa_public_key_file_path"`
 }
 
 type Config struct {
@@ -48,6 +67,8 @@ type Config struct {
 	OrderDatabase   OrderDatabase         `mapstructure:"order_database"`
 	NatsAuth        NATSAuth              `mapstructure:"nats_auth"`
 	Redis           Redis                 `mapstructure:"redis"`
+	ZitadelConfigs  ZitadelConfigs        `mapstructure:"zitadel_configs"`
+	AuthToken       AuthToken             `mapstructure:"auth_token"`
 	// Database --> Later
 	// Log --> Later
 }
@@ -59,6 +80,8 @@ type ApigatewayConfig struct {
 func setDefaults() {
 	viper.SetDefault("service_registry.request_timeout", 30*time.Second)
 	viper.SetDefault("nats_auth.nats_url", "nats://localhost:4222")
+	viper.SetDefault("nats_auth.xkey_private", "x_private_key")
+	viper.SetDefault("nats_auth.issuer_private", "issuer_private")
 
 	viper.SetDefault("nats_auth.nats_apps.0.username", "app")
 	viper.SetDefault("nats_auth.nats_apps.0.password", "app")
@@ -82,6 +105,28 @@ func setDefaults() {
 	viper.SetDefault("order_database.user", "postgres")
 	viper.SetDefault("order_database.password", "postgres")
 	viper.SetDefault("order_database.dbname", "order")
+
+	viper.SetDefault("zitadel_configs.client_id", "XXXXXXXXXXXX")
+	viper.SetDefault("zitadel_configs.redirect_uri", "XXXXXXXXXXXX")
+	viper.SetDefault("zitadel_configs.authorization_endpoint", "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oauth/v2/authorize")
+	viper.SetDefault("zitadel_configs.endsession_endpoint", "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oidc/v1/end_session")
+	viper.SetDefault("zitadel_configs.introspection_endpoint", "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oauth/v2/introspect")
+	viper.SetDefault("zitadel_configs.token_endpoint", "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oauth/v2/token")
+	viper.SetDefault("zitadel_configs.userinfo_endpoint", "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oidc/v1/userinfo")
+	viper.SetDefault("zitadel_configs.auth_domain", "https://e-commerce-golang-project-icglms.us1.zitadel.cloud")
+	viper.SetDefault("zitadel_configs.api_key_base64", "YOUR_API_KEY_BASE64")
+	viper.SetDefault("zitadel_configs.encrypt_key", "YOUR_ENCRYPT_KEY")
+
+	viper.SetDefault("redis.address", "localhost")
+	viper.SetDefault("redis.port", "6379")
+	viper.SetDefault("redis.max_idle", 9)
+
+	viper.SetDefault("auth_token.rsa_key_pair_file_path", "apps/auth/resources/rsa-key-pair.pem")
+	viper.SetDefault("auth_token.rsa_public_key_file_path", "apps/auth/resources/rsa-public.pem")
+}
+
+func init() {
+	setDefaults()
 }
 
 func Load() (*Config, error) {
@@ -99,13 +144,9 @@ func Load() (*Config, error) {
 	viper.AddConfigPath("../../configs") // configs in grandparent directory
 	viper.AddConfigPath("/configs")      // absolute path (if needed)
 	viper.AddConfigPath("../../")        // root
-	setDefaults()
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	_ = viper.BindEnv("nats_auth.nats_url")
-	_ = viper.BindEnv("nats_auth.xkey_private")
-	_ = viper.BindEnv("nats_auth.issuer_private")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("failed to read config file: %w", err)

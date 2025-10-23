@@ -10,3 +10,8 @@ apps/*/cmd/main
 
 # Generated code
 gen
+
+# Credentials
+zitadel_api_key.json
+
+*.pem
