@@ -1,19 +1,19 @@
-version: '3.8'
+version: "3.8"
 
 services:
   nats:
     image: nats:latest
     container_name: nats-jetstream
     ports:
-      - "4222:4222"   # Client
-      - "8222:8222"   # Monitoring
-      - "6222:6222"   # Cluster
+      - "4222:4222" # Client
+      - "8222:8222" # Monitoring
+      - "6222:6222" # Cluster
     volumes:
       - ./nats-server.conf:/etc/nats/nats-server.conf:ro
-      - ./natslog:/data  # Chứa dữ liệu JetStream
+      - ./natslog:/data # Chứa dữ liệu JetStream
     command: ["-c", "/etc/nats/nats-server.conf"]
     restart: unless-stopped
-  order_database:
+  sqldb_server:
     image: postgres:latest
     container_name: order_database
     ports:
@@ -25,18 +25,8 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=order
     restart: unless-stopped
-  payment_database:
-    image: postgres:latest
-    container_name: payment_database
-    ports:
-      - "5433:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=payment
-    restart: unless-stopped 
 
-  user_database:
+  mongo_server:
     image: mongo:latest
     container_name: user_database
     restart: unless-stopped
@@ -58,7 +48,7 @@ services:
       - ../.env
     environment:
       NATS_AUTH_NATS_URL: nats://nats:4222
-  
+
   redis:
     image: redis:latest
     container_name: redis_server

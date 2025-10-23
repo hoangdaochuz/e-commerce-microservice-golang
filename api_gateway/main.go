@@ -10,7 +10,9 @@ import (
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
+	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
+	redis_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/redis"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 )
@@ -106,14 +108,15 @@ func useMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.
 
 func (gw *APIGateway) Start() error {
 	fmt.Printf("Starting API Gateway in port %s\n", gw.server.Addr)
-	config, err := configs.Load()
+	_, err := configs.Load()
 	if err != nil {
 		log.Fatal("failed to load configuration: %w", err)
 		return err
 	}
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: config.Redis.Address + ":" + config.Redis.Port,
+	var redisClient *redis.Client
+	di.Resolve(func(redisPkg *redis_pkg.Redis) {
+		redisClient = redisPkg.GetClient()
 	})
 	defer redisClient.Close()
 	rateLimiter := ratelimiter.NewRateLimiter(redisClient, 50, 1*time.Minute, gw.ctx)

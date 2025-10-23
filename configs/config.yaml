@@ -28,3 +28,18 @@ order_database:
 redis:
   address: "localhost"
   port: "6379"
+  max_idle: 9
+zitadel_configs:
+  client_id: "YOUR_ZITADEL_CLIENT_ID"
+  redirect_uri: "YOUR_REDIRECT_URI"
+  authorization_endpoint: "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oauth/v2/authorize"
+  endsession_endpoint: "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oidc/v1/end_session"
+  introspection_endpoint: "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oauth/v2/introspect"
+  token_endpoint: "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oauth/v2/token"
+  userinfo_endpoint: "https://e-commerce-golang-project-icglms.us1.zitadel.cloud/oidc/v1/userinfo"
+  auth_domain: "https://e-commerce-golang-project-icglms.us1.zitadel.cloud"
+  api_key_base64: "YOUR_API_KEY_BASE64"
+  encrypt_key: "YOUR_ENCRYPT_KEY"
+auth_token:
+  rsa_key_pair_file_path: "apps/auth/resources/rsa-key-pair.pem"
+  rsa_public_key_file_path: "apps/auth/resources/rsa-public.pem"

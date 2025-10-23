@@ -20,5 +20,13 @@
       "processId": "Choose process id from pid.txt",
       "cwd": "${workspaceFolder}/apps/order"
     },
+    {
+      "name": "Attach to Authenticate Service",
+      "type": "go",
+      "request": "attach",
+      "mode": "local",
+      "processId": "Choose process id from pid.txt",
+      "cwd": "${workspaceFolder}/apps/auth"
+    }
   ]
 }

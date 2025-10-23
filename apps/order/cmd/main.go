@@ -31,6 +31,7 @@ func main() {
 	router := custom_nats.NewRouter(chi)
 	var orderApp *order.OrderServiceApp
 	di.Resolve(func(orderImplement *order.OrderServiceApp) {
+		fmt.Println("orderImplement: ", orderImplement)
 		orderApp = orderImplement
 	})
 	orderAppProxy := order_api.NewOrderServiceProxy(orderApp)

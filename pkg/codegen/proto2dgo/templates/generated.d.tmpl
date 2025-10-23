@@ -21,16 +21,16 @@ const (
 )
 
 // Enum definitions
-{{range .ProtoModel.Enums}}
-// {{.Name}} represents the {{.Name}} enum type
-type {{.Name}} string
+// {{range .ProtoModel.Enums}}
+// // {{.Name}} represents the {{.Name}} enum type
+// type {{.Name}} string
 
-const (
-	{{$enumName := .Name}}{{range .EnumFields}}
-	{{.Key}} {{$enumName}} = "{{.Key}}"
-	{{end}}
-)
-{{end}}
+// const (
+//	{{$enumName := .Name}}{{range .EnumFields}}
+//	{{.Key}} {{$enumName}} = "{{.Key}}"
+//	{{end}}
+// )
+// {{end}}
 
 {{range .ProtoModel.Services}}
 // {{.Name}} defines the service interface
