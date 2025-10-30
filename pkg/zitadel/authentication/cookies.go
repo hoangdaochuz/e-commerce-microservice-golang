@@ -28,6 +28,7 @@ func (h *HttpCookie) SetCookie(name, value, path string, seconds int) error {
 	if path == "" {
 		return fmt.Errorf("path is require to set cookie")
 	}
+	// isSecure := h.r.TLS != nil || h.r.Header.Get("X-Forwarded-Proto") == "https"
 	http.SetCookie(h.w, &http.Cookie{
 		Name:     name,
 		Value:    value,
@@ -42,6 +43,7 @@ func (h *HttpCookie) SetCookie(name, value, path string, seconds int) error {
 }
 
 func (h *HttpCookie) DelCookie(name string, cookiePath string) error {
+	// isSecure := h.r.TLS != nil || h.r.Header.Get("X-Forwarded-Proto") == "https"
 	http.SetCookie(h.w, &http.Cookie{
 		Name:     name,
 		Path:     cookiePath,

@@ -127,10 +127,11 @@ func (x *LoginRequest) GetUsername() string {
 }
 
 type LoginResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsSuccess     bool                   `protobuf:"varint,1,opt,name=IsSuccess,proto3" json:"IsSuccess,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	IsSuccess        bool                   `protobuf:"varint,1,opt,name=IsSuccess,proto3" json:"IsSuccess,omitempty"`
+	RedirectLoginURL string                 `protobuf:"bytes,2,opt,name=RedirectLoginURL,proto3" json:"RedirectLoginURL,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *LoginResponse) Reset() {
@@ -168,6 +169,13 @@ func (x *LoginResponse) GetIsSuccess() bool {
 		return x.IsSuccess
 	}
 	return false
+}
+
+func (x *LoginResponse) GetRedirectLoginURL() string {
+	if x != nil {
+		return x.RedirectLoginURL
+	}
+	return ""
 }
 
 type CallbackRequest struct {
@@ -377,9 +385,10 @@ const file_auth_proto_rawDesc = "" +
 	"\n" +
 	"auth.proto\x12\x04auth\"*\n" +
 	"\fLoginRequest\x12\x1a\n" +
-	"\bUsername\x18\x01 \x01(\tR\bUsername\"-\n" +
+	"\bUsername\x18\x01 \x01(\tR\bUsername\"Y\n" +
 	"\rLoginResponse\x12\x1c\n" +
-	"\tIsSuccess\x18\x01 \x01(\bR\tIsSuccess\"\x9e\x01\n" +
+	"\tIsSuccess\x18\x01 \x01(\bR\tIsSuccess\x12*\n" +
+	"\x10RedirectLoginURL\x18\x02 \x01(\tR\x10RedirectLoginURL\"\x9e\x01\n" +
 	"\x0fCallbackRequest\x12\x12\n" +
 	"\x04Code\x18\x01 \x01(\tR\x04Code\x12\x14\n" +
 	"\x05State\x18\x02 \x01(\tR\x05State\x125\n" +

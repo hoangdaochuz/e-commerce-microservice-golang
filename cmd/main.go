@@ -36,7 +36,7 @@ func main() {
 	}
 
 	gateway := apigateway.NewAPIGateway(natsConn, apigatewayServer, mux, ctx)
-	di.Make(func() *apigateway.APIGateway {
+	di.Make[*apigateway.APIGateway](func() *apigateway.APIGateway {
 		return gateway
 	})
 	err = gateway.Start()

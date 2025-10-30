@@ -35,7 +35,7 @@ func InitDIContainer() {
 	}
 }
 
-func Make(constructor interface{}) error {
+func Make[T any](constructor interface{}) error {
 	if DiContainer == nil {
 		InitDIContainer()
 	}

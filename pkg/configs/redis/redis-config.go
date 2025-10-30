@@ -19,7 +19,7 @@ type RedisConfig struct {
 	Db       *int
 }
 
-var _ = di.Make(GetRedisConfig)
+var _ = di.Make[*RedisConfig](GetRedisConfig)
 
 // func init() {
 // 	viper.SetDefault("redis.address", "localhost")

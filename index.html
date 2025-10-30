@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+  <h2>Login Form</h2>
+
+  <!-- Solution: JavaScript với form submit để browser tự động redirect -->
+  <form id="loginForm">
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" value="khai" required>
+    <button type="submit">Login</button>
+  </form>
+
+  <div id="status"></div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value;
+      const statusDiv = document.getElementById('status');
+
+      try {
+        statusDiv.innerHTML = 'Đang đăng nhập...';
+
+        // Gọi API - nếu có redirect, fetch sẽ follow và trả về final URL
+        const response = await fetch('http://localhost:8080/api/v1/auth/Login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ Username: username }),
+          redirect: 'follow'
+        });
+
+        console.log("Response:", response);
+        console.log("Response URL:", response.url);
+        console.log("Response redirected:", response.redirected);
+
+        if (response.ok) {
+          // Kiểm tra xem có redirect không
+          if (response.redirected) {
+            statusDiv.innerHTML = 'Đang chuyển hướng đến trang đăng nhập...';
+            console.log("Redirecting to:", response.url);
+
+            // Chuyển hướng browser đến URL cuối cùng
+            window.location.href = response.url;
+          } else {
+            // Nếu không redirect, có thể là JSON response
+            try {
+              const data = await response.json();
+              console.log("Response data:", data);
+
+              if (data && data.RedirectLoginURL) {
+                statusDiv.innerHTML = 'Đang chuyển hướng đến trang đăng nhập...';
+                window.location.href = data.RedirectLoginURL;
+              } else {
+                statusDiv.innerHTML = 'Đăng nhập thành công!';
+              }
+            } catch (jsonError) {
+              // Nếu không parse được JSON, có thể là HTML response
+              statusDiv.innerHTML = 'Đăng nhập thành công!';
+              console.log('Non-JSON response received');
+            }
+          }
+        } else {
+          statusDiv.innerHTML = `Lỗi: ${response.status} - ${response.statusText}`;
+          console.error('Response error:', response);
+        }
+
+      } catch (error) {
+        console.error('Lỗi:', error);
+        statusDiv.innerHTML = 'Có lỗi xảy ra: ' + error.message;
+      }
+    });
+  </script>
+</body>
+
+</html>

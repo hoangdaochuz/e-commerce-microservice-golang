@@ -21,7 +21,7 @@ func NewRedisCache(redisPkg *redis_pkg.Redis) *RedisCache {
 	}
 }
 
-var _ = di.Make(NewRedisCache)
+var _ = di.Make[*RedisCache](NewRedisCache)
 
 func (c *RedisCache) Get(ctx context.Context, key string) (any, error) {
 	resultCmd := c.redis.Get(ctx, key)

@@ -61,6 +61,12 @@ type AuthToken struct {
 	RsaPublicKeyFilePath string `mapstructure:"rsa_public_key_file_path"`
 }
 
+type GeneralConfig struct {
+	BackendEndpoint       string `mapstructure:"backend_endpoint"`
+	FrontendUserEndpoint  string `mapstructure:"frontend_user_endpoint"`
+	FrontendAdminEndpoint string `mapstructure:"frontent_admin_endpoint"`
+}
+
 type Config struct {
 	ServiceRegistry ServiceRegistryConfig `mapstructure:"service_registry"`
 	Apigateway      ApigatewayConfig      `mapstructure:"apigateway"`
@@ -69,6 +75,7 @@ type Config struct {
 	Redis           Redis                 `mapstructure:"redis"`
 	ZitadelConfigs  ZitadelConfigs        `mapstructure:"zitadel_configs"`
 	AuthToken       AuthToken             `mapstructure:"auth_token"`
+	GeneralConfig   GeneralConfig         `mapstructure:"general_config"`
 	// Database --> Later
 	// Log --> Later
 }
@@ -123,6 +130,9 @@ func setDefaults() {
 
 	viper.SetDefault("auth_token.rsa_key_pair_file_path", "apps/auth/resources/rsa-key-pair.pem")
 	viper.SetDefault("auth_token.rsa_public_key_file_path", "apps/auth/resources/rsa-public.pem")
+	viper.SetDefault("general_config.backend_endpoint", "http://localhost:8080")
+	viper.SetDefault("general_config.frontend_user_endpoint", "http://localhost:3000")
+	viper.SetDefault("general_config.frontend_admin_endpoint", "http://localhost:3001")
 }
 
 func init() {

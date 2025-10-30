@@ -13,7 +13,7 @@ type OrderService struct {
 	OrderRepo *order_repository.OrderRepository
 }
 
-var OrderServiceMod = di.Make(NewOrderService)
+var OrderServiceMod = di.Make[*OrderService](NewOrderService)
 
 func NewOrderService(repo *order_repository.OrderRepository) *OrderService {
 	return &OrderService{
