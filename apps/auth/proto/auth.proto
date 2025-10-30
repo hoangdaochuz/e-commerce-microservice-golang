@@ -8,6 +8,7 @@ message LoginRequest {
 
 message LoginResponse {
   bool IsSuccess  = 1;
+  string RedirectLoginURL = 2;
 }
 
 enum AuthorizationEnpointError {

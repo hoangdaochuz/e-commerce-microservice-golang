@@ -25,7 +25,7 @@ func NewOrderServiceApp(orderService *order_service.OrderService) *OrderServiceA
 	}
 }
 
-var _ = di.Make(NewOrderServiceApp)
+var _ = di.Make[*OrderServiceApp](NewOrderServiceApp)
 
 func (o *OrderServiceApp) CreateOrder(ctx context.Context, req *order.CreateOrderRequest) (*order.CreateOrderResponse, error) {
 

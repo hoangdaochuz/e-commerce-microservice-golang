@@ -14,7 +14,7 @@ type OrderRepository struct {
 	repo repo_pkg.Repo[*Order]
 }
 
-var OrderRepositoryMod = di.Make(NewOrderRepository)
+var OrderRepositoryMod = di.Make[*OrderRepository](NewOrderRepository)
 
 func NewOrderRepository() *OrderRepository {
 	orderDb := order_configs.NewOrderDatabase()

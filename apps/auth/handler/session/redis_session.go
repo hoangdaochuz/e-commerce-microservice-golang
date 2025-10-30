@@ -14,7 +14,9 @@ type RedisSession[T any] struct {
 	*redis_pkg.Redis
 }
 
-var _ = di.Make(NewRedisSession[any])
+func MakeRedisSession[T any]() error {
+	return di.Make[T](NewRedisSession[T])
+}
 
 func NewRedisSession[T any](redis *redis_pkg.Redis) *RedisSession[T] {
 	return &RedisSession[T]{
@@ -42,5 +44,5 @@ func (r *RedisSession[T]) Set(ctx context.Context, key string, value T, seconds 
 func (r *RedisSession[T]) Del(ctx context.Context, key string) error {
 	intCmd := r.Redis.GetClient().Del(ctx, key)
 	_, err := intCmd.Result()
-	return fmt.Errorf("fail to del redis session: %w", err)
+	return err
 }

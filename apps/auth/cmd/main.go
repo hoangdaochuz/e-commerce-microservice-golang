@@ -52,12 +52,11 @@ func main() {
 	var authServiceApp authService_api.AuthenticateService
 
 	err = di.Resolve(func(authServiceAppImplement *auth_handler.AuthServiceApp) {
-		fmt.Println("authServiceAppImplement: ", authServiceAppImplement)
 		authServiceApp = authServiceAppImplement
 	})
-	fmt.Println("resolve: %w", err)
-
-	fmt.Println("auth service app: ", authServiceApp)
+	if err != nil {
+		log.Fatal("fail to get auth service app")
+	}
 
 	authServiceProxy := authService_api.NewAuthenticateServiceProxy(authServiceApp)
 	authServiceClient := authService_api.NewAuthenticateServiceRouter(authServiceProxy)
@@ -78,5 +77,4 @@ func main() {
 		log.Fatal("fail to shut down authenticate service server")
 	}
 	log.Fatal("Shut down authenticate service server peacefully successfully")
-
 }

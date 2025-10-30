@@ -8,6 +8,11 @@ type ResponseInterface interface {
 	WriteHeader(statusCode int)
 }
 
+const (
+	ApplicationJsonContentType = "application/json"
+	ContentType                = "Content-Type"
+)
+
 type Response struct {
 	StatusCode int
 	Status     string
@@ -81,6 +86,35 @@ func NewResponseBuilder(statusCode int) *ResponseBuilder {
 			StatusCode: statusCode,
 		},
 	}
+}
+
+func NewResponseBuilderWithHeader(headers http.Header) *ResponseBuilder {
+	if headers == nil {
+		headers = make(http.Header)
+	}
+	responseBuilder := &ResponseBuilder{
+		res: &Response{
+			Headers: headers,
+		},
+	}
+	responseBuilder.SetContentType()
+	return responseBuilder
+}
+
+func (b *ResponseBuilder) SetContentType() {
+	b.res.Headers.Add(ContentType, ApplicationJsonContentType)
+}
+
+func (b *ResponseBuilder) Header() http.Header {
+	return b.res.Headers
+}
+
+func (b *ResponseBuilder) Write(body []byte) (int, error) {
+	return b.res.Write(body)
+}
+
+func (b *ResponseBuilder) WriteHeader(statusCode int) {
+	b.res.StatusCode = statusCode
 }
 
 func (b *ResponseBuilder) BuildBody(body []byte) *ResponseBuilder {

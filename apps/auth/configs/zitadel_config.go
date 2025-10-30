@@ -18,7 +18,7 @@ const (
 	ZitadelEncryptKey        = "zitadel_configs.encrypt_key"
 )
 
-var _ = di.Make(NewZitadelConfig)
+var _ = di.Make[*ZitadelConfig](NewZitadelConfig)
 
 type ZitadelConfig struct {
 	ClientId              string

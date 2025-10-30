@@ -48,19 +48,16 @@ func (s *Server) decryptPayloadMessage(msg *nats.Msg) (*jwt.AuthorizationRequest
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Decrypted data: ", string(decryptedData))
 
 	reqClaims, err := jwt.DecodeAuthorizationRequestClaims(string(decryptedData))
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Name", reqClaims.AuthorizationRequest.ConnectOptions.Username)
 	return reqClaims, nil
 }
 
 func (s *Server) encryptedResponse(response []byte, claims *jwt.AuthorizationRequestClaims) ([]byte, error) {
 	ontimePublicXKey := claims.AuthorizationRequest.Server.XKey
-	fmt.Println("ontimePublicXKey: ", ontimePublicXKey)
 	encryptedResponse, err := s.keyPairs.Seal(response, ontimePublicXKey)
 	if err != nil {
 		return nil, err
@@ -69,7 +66,6 @@ func (s *Server) encryptedResponse(response []byte, claims *jwt.AuthorizationReq
 }
 
 func (s *Server) buildCommonResponseAuthorizationClaims(reqClaims *jwt.AuthorizationRequestClaims) (*jwt.AuthorizationResponseClaims, error) {
-	fmt.Println("issuerKey: ", s.issuerPrivKey)
 	issuerSeed, err := nkeys.FromSeed([]byte(s.issuerPrivKey))
 	if err != nil {
 		return nil, err

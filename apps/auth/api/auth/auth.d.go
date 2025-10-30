@@ -12,51 +12,45 @@ import (
 // NATS subject constants
 const (
 	NATS_SUBJECT = "/api/v1/auth"
-	
-	
+
 	AUTH_LOGIN = NATS_SUBJECT + "/Login"
-	
+
 	AUTH_CALLBACK = NATS_SUBJECT + "/Callback"
-	
+
 	AUTH_VALIDATE_TOKEN = NATS_SUBJECT + "/ValidateToken"
-	
-	
 )
 
 // Enum definitions
-// 
+//
 // // AuthorizationEnpointError represents the AuthorizationEnpointError enum type
 // type AuthorizationEnpointError string
 
 // const (
-//	
+//
 //	invalid_request AuthorizationEnpointError = "invalid_request"
-//	
+//
 //	invalid_scope AuthorizationEnpointError = "invalid_scope"
-//	
+//
 //	unauthorized_client AuthorizationEnpointError = "unauthorized_client"
-//	
+//
 //	unsupported_response_type AuthorizationEnpointError = "unsupported_response_type"
-//	
+//
 //	server_error AuthorizationEnpointError = "server_error"
-//	
+//
 //	interaction_required AuthorizationEnpointError = "interaction_required"
-//	
+//
 //	login_required AuthorizationEnpointError = "login_required"
-//	
+//
 // )
-// 
-
+//
 
 // AuthenticateService defines the service interface
 type AuthenticateService interface {
-	
-	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error)
-	
-	Callback(ctx context.Context, req *CallbackRequest) (*CallbackResponse, error)
-	
+	Login(ctx context.Context, req *LoginRequest) (*custom_nats.Response, error)
+
+	Callback(ctx context.Context, req *CallbackRequest) (*custom_nats.Response, error)
+
 	ValidateToken(ctx context.Context, req *ValidateTokenRequest) (*ValidateTokenResponse, error)
-	
 }
 
 // AuthenticateServiceProxy wraps the service implementation
@@ -71,14 +65,13 @@ func NewAuthenticateServiceProxy(service AuthenticateService) *AuthenticateServi
 	}
 }
 
-
 // Login delegates the call to the underlying service
-func (p *AuthenticateServiceProxy) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
+func (p *AuthenticateServiceProxy) Login(ctx context.Context, req *LoginRequest) (*custom_nats.Response, error) {
 	return p.service.Login(ctx, req)
 }
 
 // Callback delegates the call to the underlying service
-func (p *AuthenticateServiceProxy) Callback(ctx context.Context, req *CallbackRequest) (*CallbackResponse, error) {
+func (p *AuthenticateServiceProxy) Callback(ctx context.Context, req *CallbackRequest) (*custom_nats.Response, error) {
 	return p.service.Callback(ctx, req)
 }
 
@@ -86,7 +79,6 @@ func (p *AuthenticateServiceProxy) Callback(ctx context.Context, req *CallbackRe
 func (p *AuthenticateServiceProxy) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (*ValidateTokenResponse, error) {
 	return p.service.ValidateToken(ctx, req)
 }
-
 
 // AuthenticateServiceRouter handles NATS routing for AuthenticateService service
 type AuthenticateServiceRouter struct {
@@ -102,17 +94,11 @@ func NewAuthenticateServiceRouter(proxy *AuthenticateServiceProxy) *Authenticate
 
 // Register registers all service methods with the NATS router
 func (r *AuthenticateServiceRouter) Register(natsRouter custom_nats.Router) {
-	
+
 	natsRouter.RegisterRoute("POST", AUTH_LOGIN, r.proxy.Login)
-	
+
 	natsRouter.RegisterRoute("POST", AUTH_CALLBACK, r.proxy.Callback)
-	
+
 	natsRouter.RegisterRoute("POST", AUTH_VALIDATE_TOKEN, r.proxy.ValidateToken)
-	
+
 }
-
-
-
-
-
-

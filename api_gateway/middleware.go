@@ -52,7 +52,6 @@ func RateLimitMiddleware(rateLimiter *ratelimiter.RateLimiter) func(http.Handler
 			clientIP := r.RemoteAddr
 			uri := r.URL.Path
 			key := clientIP + uri
-			fmt.Println("key: ", key)
 			isAllow, err := rateLimiter.IsAllow(key)
 			if err != nil || !isAllow {
 

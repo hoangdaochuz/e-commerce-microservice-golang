@@ -10,7 +10,7 @@ type Redis struct {
 	client *redis.Client
 }
 
-var _ = di.Make(NewRedis)
+var _ = di.Make[*Redis](NewRedis)
 
 func NewRedis(redisConfig *redis_config.RedisConfig) *Redis {
 	return &Redis{

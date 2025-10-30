@@ -2,10 +2,24 @@ package custom_nats
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/spf13/viper"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+const (
+	backend_endpont_key = "general_config.backend_endpoint"
+)
+
+func init() {
+	viper.SetDefault(backend_endpont_key, "http://localhost:8080")
+}
 
 type Request struct {
 	Header  map[string][]string
@@ -13,6 +27,10 @@ type Request struct {
 	Body    []byte
 	URL     string
 	Subject string
+}
+
+var specialEnpointMap = map[string]string{
+	"callback": "/api/v1/auth/Callback",
 }
 
 func NewRequest(header map[string][]string, method, url, subject string, body []byte) *Request {
@@ -46,11 +64,72 @@ func buildNatsSubjectFromPath(path string) string {
 	return subject
 }
 
-func HttpRequestToNatsRequest(r http.Request) (*Request, error) {
-	method := r.Method
+func copyCookieFromHTTPRequest(cookies []*http.Cookie) string {
+	if len(cookies) == 0 {
+		return ""
+	}
+	cookiesString := []string{}
+	for _, cookie := range cookies {
+		cookiesString = append(cookiesString, fmt.Sprintf("%s=%s", cookie.Name, cookie.Value))
+	}
+	return strings.Join(cookiesString, "; ")
+}
+
+func convertHttpGetRequestToNatsPostRequest(r http.Request) (*Request, error) {
 	urlObject := r.URL
 	host := urlObject.Host
+	path := urlObject.Path
+	if host == "" {
+		host = viper.GetString(backend_endpont_key)
+	}
+	queryParams := urlObject.RawQuery
+	querySplits := strings.Split(queryParams, "&")
+	queryObj := make(map[string]string)
+	for _, query := range querySplits {
+		keyValuePair := strings.Split(query, "=")
+		queryObj[cases.Title(language.English).String(keyValuePair[0])] = keyValuePair[1]
+	}
+	body, err := json.Marshal(queryObj)
+	if err != nil {
+		return nil, err
+	}
+	splitsPath := strings.Split(path, "/")
+	if len(splitsPath) == 2 {
+		v, ok := specialEnpointMap[splitsPath[1]]
+		if !ok {
+			return nil, fmt.Errorf("path is not valid")
+		}
+		path = v
+	}
+	subject := buildNatsSubjectFromPath(path)
 
+	urlString := host + path
+	headers := make(map[string][]string)
+	for key, values := range r.Header {
+		headers[key] = append(headers[key], values...)
+	}
+	cookie := copyCookieFromHTTPRequest(r.Cookies())
+	if cookie != "" {
+		headers["Cookie"] = []string{copyCookieFromHTTPRequest(r.Cookies())}
+	}
+
+	return &Request{
+		Method:  "POST",
+		Body:    body,
+		Header:  headers,
+		Subject: subject,
+		URL:     urlString,
+	}, nil
+}
+
+func HttpRequestToNatsRequest(r http.Request) (*Request, error) {
+	method := r.Method
+	headers := make(map[string][]string)
+	if method == "GET" {
+		return convertHttpGetRequestToNatsPostRequest(r)
+	}
+	urlObject := r.URL
+	host := urlObject.Host
 	path := urlObject.Path
 	subject := buildNatsSubjectFromPath(path)
 	if path[0] != '/' {
@@ -68,10 +147,19 @@ func HttpRequestToNatsRequest(r http.Request) (*Request, error) {
 		return nil, err
 	}
 
+	for headerKey, values := range r.Header {
+		headers[headerKey] = append(headers[headerKey], values...)
+	}
+
+	cookie := copyCookieFromHTTPRequest(r.Cookies())
+	if cookie != "" {
+		headers["Cookie"] = []string{cookie}
+	}
+
 	return &Request{
 		Method:  method,
 		URL:     urlString,
-		Header:  r.Header,
+		Header:  headers,
 		Body:    body,
 		Subject: subject,
 	}, nil

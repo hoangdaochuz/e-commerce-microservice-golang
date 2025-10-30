@@ -21,13 +21,14 @@ import (
 type Auth[T any] struct {
 	ctx               context.Context
 	Session           SessionHandler[T]
+	CodeVerifierStore SessionHandler[string]
 	Config            Config
 	OIDCConfig        OIDCConfig
 	SessionCookieName string
 	OIDCDiscovery     OIDCDiscovery
 }
 
-func NewAuth[T any](ctx context.Context, session SessionHandler[T], config Config, sessionCookieName string, oidcDiscovery OIDCDiscovery) (*Auth[T], error) {
+func NewAuth[T any](ctx context.Context, session SessionHandler[T], config Config, sessionCookieName string, oidcDiscovery OIDCDiscovery, codeVerifierStore SessionHandler[string]) (*Auth[T], error) {
 	oidcConfig, err := oidcDiscovery.Discovery(ctx, config.AuthDomain)
 	if err != nil {
 		return nil, err
@@ -35,6 +36,7 @@ func NewAuth[T any](ctx context.Context, session SessionHandler[T], config Confi
 	return &Auth[T]{
 		ctx:               ctx,
 		Session:           session,
+		CodeVerifierStore: codeVerifierStore,
 		Config:            config,
 		SessionCookieName: sessionCookieName,
 		OIDCDiscovery:     oidcDiscovery,
@@ -170,21 +172,16 @@ func WithLoginHint(hint string) LoginOps {
 }
 
 const (
-	codeVerifierKey  = "code_verifier"
 	stateKey         = "state"
 	EXPIRE_IN_SECOND = 5 * 60 // 5 min
 )
 
-func storeCodeVerifier(codeVerifier string, cookieHandler CookieHandler, cookiePath string) error {
-	return cookieHandler.SetCookie(codeVerifierKey, codeVerifier, cookiePath, EXPIRE_IN_SECOND)
-}
-
-func storeStateCookie(cookieHandler CookieHandler, state, cookiePath string) error {
-	return cookieHandler.SetCookie(stateKey, state, cookiePath, EXPIRE_IN_SECOND)
+func (a *Auth[T]) storeCodeVerifier(codeVerifier string, encryptedState string) error {
+	return a.CodeVerifierStore.Set(a.ctx, encryptedState, codeVerifier, a.Config.ExpiredInSeconds)
 }
 
 // AuthCodeUrl generate a URL redirect a agent (web browser) to login UI page
-func (a *Auth[T]) AuthCodeUrl(cookieHandler CookieHandler, postLoginSuccessURI string, scopeGetter ScopeGetter, loginOpts []LoginOps) (string, error) {
+func (a *Auth[T]) AuthCodeUrl(r *http.Request, w http.ResponseWriter, postLoginSuccessURI string, scopeGetter ScopeGetter, loginOpts []LoginOps) (string, error) {
 	var scopes []string
 	state := &authentication.State{
 		RequestedURI: postLoginSuccessURI,
@@ -206,10 +203,11 @@ func (a *Auth[T]) AuthCodeUrl(cookieHandler CookieHandler, postLoginSuccessURI s
 	// }
 
 	codeVerifier := oauth2.GenerateVerifier()
-	err = storeCodeVerifier(codeVerifier, cookieHandler, postLoginSuccessURI)
+	err = a.storeCodeVerifier(codeVerifier, encryptedState)
 	if err != nil {
 		return "", fmt.Errorf("fail to store code verifier")
 	}
+
 	// store code_verifier into cookie to use on exchange code
 	codeChallenge := oauth2.S256ChallengeFromVerifier(codeVerifier)
 
@@ -244,7 +242,7 @@ type Token struct {
 	State   string
 }
 
-func (a *Auth[T]) getToken(r *http.Request, cookieHandler CookieHandler, redirectURI, appPath string) (*Token, error) {
+func (a *Auth[T]) getToken(r *http.Request, redirectURI string) (*Token, error) {
 
 	queryParams := r.URL.Query()
 	code := queryParams.Get("code")
@@ -259,17 +257,20 @@ func (a *Auth[T]) getToken(r *http.Request, cookieHandler CookieHandler, redirec
 		return nil, fmt.Errorf("error when make authorization request. error: %s, error descrition: %s, state: %s", errors, errDesc, state)
 	}
 
-	codeVerifier, err := cookieHandler.GetCookie(codeVerifierKey)
+	codeVerifier, err := a.CodeVerifierStore.Get(a.ctx, state)
 	if err != nil {
-		return nil, fmt.Errorf("fail to get code verifier from cookie: %w", err)
+		return nil, fmt.Errorf("fail to get code verifier from session store: %w", err)
 	}
-	err = cookieHandler.DelCookie(codeVerifierKey, appPath)
+	if codeVerifier == nil || *codeVerifier == "" {
+		return nil, fmt.Errorf("cannot get code verifier from session store")
+	}
+	err = a.CodeVerifierStore.Del(a.ctx, state)
 	if err != nil {
-		return nil, fmt.Errorf("fail to delete cookie: %w", err)
+		return nil, fmt.Errorf("fail to delete code verifier: %w", err)
 	}
 
 	authCodeOption := []oauth2.AuthCodeOption{
-		oauth2.SetAuthURLParam("code_verifier", codeVerifier),
+		oauth2.SetAuthURLParam("code_verifier", *codeVerifier),
 		oauth2.SetAuthURLParam("client_id", a.Config.ZitadelClientID),
 	}
 
@@ -320,6 +321,7 @@ func (a *Auth[T]) userInfo(ctx context.Context, token *Token) (*zitadel_pkg.Zita
 		return nil, err
 	}
 	claims.IdToken = token.IdToken
+	claims.Token = accessToken
 	return &claims, nil
 }
 
@@ -328,7 +330,7 @@ func (a *Auth[T]) Callback(r *http.Request, w http.ResponseWriter, appPath strin
 	// So when other request with enpoint match with /pro/next-shop  will have cookie and backend can read this cookie.
 	// Because all request will start with endpoint something like that, so the cookie will be set and can be read by backend.
 	httpCookieHandler := NewHttpCookie(r, w)
-	token, err := a.getToken(r, httpCookieHandler, a.Config.RedirectURI, appPath)
+	token, err := a.getToken(r, a.Config.RedirectURI)
 	if err != nil {
 		return fmt.Errorf("fail to get token: %w", err)
 	}
