@@ -112,11 +112,33 @@ func (a *Auth[T]) logoutUrl(idToken, postLogoutUrl string) (string, error) {
 	return endSessionUrl.String(), nil
 }
 
-func (a *Auth[T]) LogoutUrl(cookieHanlder CookieHandler, idToken, cookiesPath, postLogoutURL string) (string, error) {
-	err := cookieHanlder.DelCookie(a.SessionCookieName, cookiesPath)
+func (a *Auth[T]) LogoutUrl(cookieHanlder CookieHandler, cookiesPath, idToken, postLogoutURL string) (string, error) {
+	cookieValue, err := cookieHanlder.GetCookie(a.SessionCookieName)
+	if err != nil {
+		return "", err
+	}
+
+	decodeEncryptKey, err := getDecodeEncryptKey(a.Config.EncryptKey)
+	if err != nil {
+		return "", err
+	}
+	sessionId, err := crypto.DecryptAES(cookieValue, decodeEncryptKey)
+	if err != nil {
+		return "", err
+	}
+
+	// delete cookie of user-agent (browser)
+	err = cookieHanlder.DelCookie(a.SessionCookieName, cookiesPath)
 	if err != nil {
 		return "", fmt.Errorf("fail to delete cookie")
 	}
+
+	// delete session info in redis
+	err = a.Session.Del(a.ctx, sessionId)
+	if err != nil {
+		return "", fmt.Errorf("fail to delete session redis: %w", err)
+	}
+
 	endSessionUrl, err := a.logoutUrl(idToken, postLogoutURL)
 	if err != nil {
 		return "", err
@@ -170,11 +192,6 @@ func WithLoginHint(hint string) LoginOps {
 		return oauth2.SetAuthURLParam("login_hint", hint)
 	}
 }
-
-const (
-	stateKey         = "state"
-	EXPIRE_IN_SECOND = 5 * 60 // 5 min
-)
 
 func (a *Auth[T]) storeCodeVerifier(codeVerifier string, encryptedState string) error {
 	return a.CodeVerifierStore.Set(a.ctx, encryptedState, codeVerifier, a.Config.ExpiredInSeconds)
@@ -371,4 +388,27 @@ func (a *Auth[T]) Callback(r *http.Request, w http.ResponseWriter, appPath strin
 	}
 	http.Redirect(w, r, decryptedState.RequestedURI, http.StatusFound)
 	return nil
+}
+
+func (a *Auth[T]) GetCurrentUser(ctx context.Context, cookieHandler CookieHandler) (*T, error) {
+	cookies, err := cookieHandler.GetCookie(a.SessionCookieName)
+	if err != nil {
+		return nil, err
+	}
+	decodeEncryptKey, err := getDecodeEncryptKey(a.Config.EncryptKey)
+	if err != nil {
+		return nil, err
+	}
+	sessionId, err := crypto.DecryptAES(cookies, decodeEncryptKey)
+	if err != nil {
+		return nil, err
+	}
+	claims, err := a.Session.Get(ctx, sessionId)
+	if err != nil {
+		return nil, err
+	}
+	if claims == nil {
+		return nil, fmt.Errorf("session info expired")
+	}
+	return claims, nil
 }

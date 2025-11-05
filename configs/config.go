@@ -54,6 +54,7 @@ type ZitadelConfigs struct {
 	ApiKeyBase64          string `mapstructure:"api_key_base64"`
 	AuthDomain            string `mapstructure:"auth_domain"`
 	EncryptKey            string `mapstructure:"encrypt_key"`
+	SessionExpiredSeconds string `mapstructure:"session_expired_seconds"`
 }
 
 type AuthToken struct {
@@ -123,6 +124,8 @@ func setDefaults() {
 	viper.SetDefault("zitadel_configs.auth_domain", "https://e-commerce-golang-project-icglms.us1.zitadel.cloud")
 	viper.SetDefault("zitadel_configs.api_key_base64", "YOUR_API_KEY_BASE64")
 	viper.SetDefault("zitadel_configs.encrypt_key", "YOUR_ENCRYPT_KEY")
+	viper.SetDefault("zitadel_configs.cookie_name", "ecommerce-cookie")
+	viper.SetDefault("zitadel_configs.session_expired_seconds", 604800)
 
 	viper.SetDefault("redis.address", "localhost")
 	viper.SetDefault("redis.port", "6379")

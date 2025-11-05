@@ -18,6 +18,10 @@ const (
 	AUTH_CALLBACK = NATS_SUBJECT + "/Callback"
 
 	AUTH_VALIDATE_TOKEN = NATS_SUBJECT + "/ValidateToken"
+
+	AUTH_GET_MY_PROFILE = NATS_SUBJECT + "/GetMyProfile"
+
+	AUTH_LOGOUT = NATS_SUBJECT + "/Logout"
 )
 
 // Enum definitions
@@ -51,6 +55,10 @@ type AuthenticateService interface {
 	Callback(ctx context.Context, req *CallbackRequest) (*custom_nats.Response, error)
 
 	ValidateToken(ctx context.Context, req *ValidateTokenRequest) (*ValidateTokenResponse, error)
+
+	GetMyProfile(ctx context.Context, req *EmptyRequest) (*GetMyProfileResponse, error)
+
+	Logout(ctx context.Context, req *EmptyRequest) (*custom_nats.Response, error)
 }
 
 // AuthenticateServiceProxy wraps the service implementation
@@ -80,6 +88,16 @@ func (p *AuthenticateServiceProxy) ValidateToken(ctx context.Context, req *Valid
 	return p.service.ValidateToken(ctx, req)
 }
 
+// GetMyProfile delegates the call to the underlying service
+func (p *AuthenticateServiceProxy) GetMyProfile(ctx context.Context, req *EmptyRequest) (*GetMyProfileResponse, error) {
+	return p.service.GetMyProfile(ctx, req)
+}
+
+// Login delegates the call to underlying service
+func (p *AuthenticateServiceProxy) Logout(ctx context.Context, req *EmptyRequest) (*custom_nats.Response, error) {
+	return p.service.Logout(ctx, req)
+}
+
 // AuthenticateServiceRouter handles NATS routing for AuthenticateService service
 type AuthenticateServiceRouter struct {
 	proxy *AuthenticateServiceProxy
@@ -100,5 +118,9 @@ func (r *AuthenticateServiceRouter) Register(natsRouter custom_nats.Router) {
 	natsRouter.RegisterRoute("POST", AUTH_CALLBACK, r.proxy.Callback)
 
 	natsRouter.RegisterRoute("POST", AUTH_VALIDATE_TOKEN, r.proxy.ValidateToken)
+
+	natsRouter.RegisterRoute("POST", AUTH_GET_MY_PROFILE, r.proxy.GetMyProfile)
+
+	natsRouter.RegisterRoute("POST", AUTH_LOGOUT, r.proxy.Logout)
 
 }

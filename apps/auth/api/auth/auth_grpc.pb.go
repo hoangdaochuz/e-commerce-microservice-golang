@@ -22,6 +22,8 @@ const (
 	AuthenticateService_Login_FullMethodName         = "/auth.AuthenticateService/Login"
 	AuthenticateService_Callback_FullMethodName      = "/auth.AuthenticateService/Callback"
 	AuthenticateService_ValidateToken_FullMethodName = "/auth.AuthenticateService/ValidateToken"
+	AuthenticateService_GetMyProfile_FullMethodName  = "/auth.AuthenticateService/GetMyProfile"
+	AuthenticateService_Logout_FullMethodName        = "/auth.AuthenticateService/Logout"
 )
 
 // AuthenticateServiceClient is the client API for AuthenticateService service.
@@ -31,6 +33,8 @@ type AuthenticateServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Callback(ctx context.Context, in *CallbackRequest, opts ...grpc.CallOption) (*CallbackResponse, error)
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	GetMyProfile(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*GetMyProfileResponse, error)
+	Logout(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 }
 
 type authenticateServiceClient struct {
@@ -71,6 +75,26 @@ func (c *authenticateServiceClient) ValidateToken(ctx context.Context, in *Valid
 	return out, nil
 }
 
+func (c *authenticateServiceClient) GetMyProfile(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*GetMyProfileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMyProfileResponse)
+	err := c.cc.Invoke(ctx, AuthenticateService_GetMyProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticateServiceClient) Logout(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LogoutResponse)
+	err := c.cc.Invoke(ctx, AuthenticateService_Logout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthenticateServiceServer is the server API for AuthenticateService service.
 // All implementations must embed UnimplementedAuthenticateServiceServer
 // for forward compatibility.
@@ -78,6 +102,8 @@ type AuthenticateServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Callback(context.Context, *CallbackRequest) (*CallbackResponse, error)
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	GetMyProfile(context.Context, *EmptyRequest) (*GetMyProfileResponse, error)
+	Logout(context.Context, *EmptyRequest) (*LogoutResponse, error)
 	mustEmbedUnimplementedAuthenticateServiceServer()
 }
 
@@ -96,6 +122,12 @@ func (UnimplementedAuthenticateServiceServer) Callback(context.Context, *Callbac
 }
 func (UnimplementedAuthenticateServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
+}
+func (UnimplementedAuthenticateServiceServer) GetMyProfile(context.Context, *EmptyRequest) (*GetMyProfileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMyProfile not implemented")
+}
+func (UnimplementedAuthenticateServiceServer) Logout(context.Context, *EmptyRequest) (*LogoutResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 func (UnimplementedAuthenticateServiceServer) mustEmbedUnimplementedAuthenticateServiceServer() {}
 func (UnimplementedAuthenticateServiceServer) testEmbeddedByValue()                             {}
@@ -172,6 +204,42 @@ func _AuthenticateService_ValidateToken_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthenticateService_GetMyProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmptyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticateServiceServer).GetMyProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticateService_GetMyProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticateServiceServer).GetMyProfile(ctx, req.(*EmptyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticateService_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmptyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticateServiceServer).Logout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticateService_Logout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticateServiceServer).Logout(ctx, req.(*EmptyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthenticateService_ServiceDesc is the grpc.ServiceDesc for AuthenticateService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +258,14 @@ var AuthenticateService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ValidateToken",
 			Handler:    _AuthenticateService_ValidateToken_Handler,
+		},
+		{
+			MethodName: "GetMyProfile",
+			Handler:    _AuthenticateService_GetMyProfile_Handler,
+		},
+		{
+			MethodName: "Logout",
+			Handler:    _AuthenticateService_Logout_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

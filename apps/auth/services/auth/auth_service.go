@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/auth/api/auth"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/auth/handler/claims"
@@ -39,9 +40,10 @@ const (
 	REDIRECT_URI_KEY            = "zitadel_configs.redirect_uri"
 	CLIENT_ID                   = "zitadel_configs.client_id"
 	END_SESSION_ENDPOINT_KEY    = "zitadel_configs.endsession_endpoint"
-	COOKIE_NAME                 = "ecommerce-cookie"
+	COOKIE_NAME_KEY             = "zitadel_configs.cookie_name"
 	FRONTEND_USER_ENDPOINT_KEY  = "general_config.frontend_user_endpoint"
 	FRONTEND_ADMIN_ENDPOINT_KEY = "general_config.frontend_admin_endpoint"
+	SESSION_EXPIRED_SECONDS     = "zitadel_configs.session_expired_seconds"
 )
 
 func getDefaultScopes() []zitadel_authentication.ScopeOps {
@@ -64,11 +66,15 @@ func getProjectRoleScopes(role string) []zitadel_authentication.ScopeOps {
 func NewAuthService() (*AuthService, error) {
 	authDomain := viper.GetString(AUTH_DOMAIN_KEY)
 	zitadelKeyBase64 := viper.GetString(API_KEY_BASE64_KEY)
+	sessionExpiredSeconds, err := strconv.Atoi(viper.GetString(SESSION_EXPIRED_SECONDS))
+	if err != nil {
+		return nil, err
+	}
 	authConfig := zitadel_authentication.Config{
 		AuthDomain:            authDomain,
 		EncryptKey:            viper.GetString(ENCRYPT_KEY),
 		ZitadelClientID:       viper.GetString(CLIENT_ID),
-		ExpiredInSeconds:      5 * 60,
+		ExpiredInSeconds:      sessionExpiredSeconds,
 		EndSessionEndpoint:    viper.GetString(END_SESSION_ENDPOINT_KEY),
 		TokenEndpoint:         viper.GetString(TOKEN_ENDPOINT_KEY),
 		AuthorizationEndpoint: viper.GetString(AUTHORIZE_ENDPOINT_KEY),
@@ -78,7 +84,7 @@ func NewAuthService() (*AuthService, error) {
 	}
 	// sessionHandler := auth_session.NewRedisSession[claims.Claim]()
 
-	err := auth_session.MakeRedisSession[claims.Claim]()
+	err = auth_session.MakeRedisSession[claims.Claim]()
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +112,7 @@ func NewAuthService() (*AuthService, error) {
 
 	oidcDiscovery := zitadel_authentication.NewOIDCDiscoveryImpl()
 
-	zitadelAuth, err := zitadel_authentication.NewAuth(context.TODO(), sessionHandler, authConfig, COOKIE_NAME, oidcDiscovery, codeVerifierStore)
+	zitadelAuth, err := zitadel_authentication.NewAuth(context.TODO(), sessionHandler, authConfig, viper.GetString(COOKIE_NAME_KEY), oidcDiscovery, codeVerifierStore)
 	if err != nil {
 		return nil, fmt.Errorf("fail to create auth service: %w", err)
 	}
@@ -126,7 +132,7 @@ func NewAuthService() (*AuthService, error) {
 	}, nil
 }
 
-func (srv *AuthService) Login(ctx context.Context) (*custom_nats.Response, error) {
+func (srv *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*custom_nats.Response, error) {
 	reqCtx := ctx.Value(shared.HTTPRequest_ContextKey)
 	r := reqCtx.(*http.Request)
 	w := custom_nats.NewResponseBuilderWithHeader(nil)
@@ -137,7 +143,7 @@ func (srv *AuthService) Login(ctx context.Context) (*custom_nats.Response, error
 		scopes = append(scopes, getProjectRoleScopes("admin")...)
 		return scopes
 	}, []zitadel_authentication.LoginOps{
-		zitadel_authentication.WithLoginHint("khai.nguyen"),
+		zitadel_authentication.WithLoginHint(req.Username),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("fail to get login url: %w", err)
@@ -208,4 +214,49 @@ func (srv *AuthService) Callback(ctx context.Context, req *auth.CallbackRequest)
 
 func (srv *AuthService) ValidateToken() (bool, error) {
 	return false, nil
+}
+
+func (srv *AuthService) GetMyProfile(ctx context.Context, req *auth.EmptyRequest) (*auth.GetMyProfileResponse, error) {
+	rCtx := ctx.Value(shared.HTTPRequest_ContextKey)
+	r := rCtx.(*http.Request)
+	httpCookieHandler := zitadel_authentication.NewHttpCookie(r, nil)
+
+	claims, err := srv.zitadelAuth.GetCurrentUser(ctx, httpCookieHandler)
+	if err != nil {
+		return nil, fmt.Errorf("fail to get current user: %w", err)
+	}
+	return &auth.GetMyProfileResponse{
+		Username:  claims.Username,
+		Email:     claims.Email,
+		FirstName: claims.GivenName,
+		LastName:  claims.FamilyName,
+		Gender:    claims.Gender,
+	}, nil
+}
+
+func (srv *AuthService) Logout(ctx context.Context, req *auth.EmptyRequest) (*custom_nats.Response, error) {
+	w := custom_nats.NewResponseBuilderWithHeader(nil)
+	rCtx := ctx.Value(shared.HTTPRequest_ContextKey)
+	r := rCtx.(*http.Request)
+
+	httpCookieHandler := zitadel_authentication.NewHttpCookie(r, w)
+
+	claims, err := srv.zitadelAuth.GetCurrentUser(ctx, httpCookieHandler)
+	if err != nil {
+		return nil, err
+	}
+	if claims == nil {
+		return nil, fmt.Errorf("claims is empty")
+	}
+	idToken := claims.IdToken
+	endSessionUrl, err := srv.zitadelAuth.LogoutUrl(httpCookieHandler, "/", idToken, srv.zitadelAuth.Config.PostLoginSuccessURI)
+	if err != nil {
+		return nil, err
+	}
+	if endSessionUrl == "" {
+		return nil, fmt.Errorf("end session url is empty")
+	}
+
+	http.Redirect(w, r, endSessionUrl, http.StatusFound)
+	return w.Build(), nil
 }

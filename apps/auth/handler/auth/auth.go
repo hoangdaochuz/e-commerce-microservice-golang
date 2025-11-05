@@ -24,7 +24,7 @@ func NewAuthServiceApp(authService *auth_service.AuthService) *AuthServiceApp {
 var _ = di.Make[*AuthServiceApp](NewAuthServiceApp)
 
 func (a *AuthServiceApp) Login(ctx context.Context, req *auth.LoginRequest) (*custom_nats.Response, error) {
-	return a.authService.Login(ctx)
+	return a.authService.Login(ctx, req)
 }
 
 func (a *AuthServiceApp) Callback(ctx context.Context, req *auth.CallbackRequest) (*custom_nats.Response, error) {
@@ -34,4 +34,12 @@ func (a *AuthServiceApp) Callback(ctx context.Context, req *auth.CallbackRequest
 func (a *AuthServiceApp) ValidateToken(ctx context.Context, req *auth.ValidateTokenRequest) (*auth.ValidateTokenResponse, error) {
 	// implement later
 	return nil, nil
+}
+
+func (a *AuthServiceApp) GetMyProfile(ctx context.Context, req *auth.EmptyRequest) (*auth.GetMyProfileResponse, error) {
+	return a.authService.GetMyProfile(ctx, req)
+}
+
+func (a *AuthServiceApp) Logout(ctx context.Context, req *auth.EmptyRequest) (*custom_nats.Response, error) {
+	return a.authService.Logout(ctx, req)
 }

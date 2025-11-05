@@ -378,6 +378,162 @@ func (x *ValidateTokenResponse) GetIsValid() bool {
 	return false
 }
 
+type GetMyProfileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=Username,proto3" json:"Username,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=Email,proto3" json:"Email,omitempty"`
+	FirstName     string                 `protobuf:"bytes,3,opt,name=FirstName,proto3" json:"FirstName,omitempty"`
+	LastName      string                 `protobuf:"bytes,4,opt,name=LastName,proto3" json:"LastName,omitempty"`
+	Gender        string                 `protobuf:"bytes,5,opt,name=Gender,proto3" json:"Gender,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMyProfileResponse) Reset() {
+	*x = GetMyProfileResponse{}
+	mi := &file_auth_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMyProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMyProfileResponse) ProtoMessage() {}
+
+func (x *GetMyProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMyProfileResponse.ProtoReflect.Descriptor instead.
+func (*GetMyProfileResponse) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetMyProfileResponse) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *GetMyProfileResponse) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *GetMyProfileResponse) GetFirstName() string {
+	if x != nil {
+		return x.FirstName
+	}
+	return ""
+}
+
+func (x *GetMyProfileResponse) GetLastName() string {
+	if x != nil {
+		return x.LastName
+	}
+	return ""
+}
+
+func (x *GetMyProfileResponse) GetGender() string {
+	if x != nil {
+		return x.Gender
+	}
+	return ""
+}
+
+type EmptyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmptyRequest) Reset() {
+	*x = EmptyRequest{}
+	mi := &file_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmptyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmptyRequest) ProtoMessage() {}
+
+func (x *EmptyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmptyRequest.ProtoReflect.Descriptor instead.
+func (*EmptyRequest) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{7}
+}
+
+type LogoutResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IsSuccess     bool                   `protobuf:"varint,1,opt,name=IsSuccess,proto3" json:"IsSuccess,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutResponse) Reset() {
+	*x = LogoutResponse{}
+	mi := &file_auth_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutResponse) ProtoMessage() {}
+
+func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
+func (*LogoutResponse) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *LogoutResponse) GetIsSuccess() bool {
+	if x != nil {
+		return x.IsSuccess
+	}
+	return false
+}
+
 var File_auth_proto protoreflect.FileDescriptor
 
 const file_auth_proto_rawDesc = "" +
@@ -399,7 +555,16 @@ const file_auth_proto_rawDesc = "" +
 	"\x14ValidateTokenRequest\x12\x14\n" +
 	"\x05Token\x18\x01 \x01(\tR\x05Token\"1\n" +
 	"\x15ValidateTokenResponse\x12\x18\n" +
-	"\aIsValid\x18\x01 \x01(\bR\aIsValid*\xbb\x01\n" +
+	"\aIsValid\x18\x01 \x01(\bR\aIsValid\"\x9a\x01\n" +
+	"\x14GetMyProfileResponse\x12\x1a\n" +
+	"\bUsername\x18\x01 \x01(\tR\bUsername\x12\x14\n" +
+	"\x05Email\x18\x02 \x01(\tR\x05Email\x12\x1c\n" +
+	"\tFirstName\x18\x03 \x01(\tR\tFirstName\x12\x1a\n" +
+	"\bLastName\x18\x04 \x01(\tR\bLastName\x12\x16\n" +
+	"\x06Gender\x18\x05 \x01(\tR\x06Gender\"\x0e\n" +
+	"\fEmptyRequest\".\n" +
+	"\x0eLogoutResponse\x12\x1c\n" +
+	"\tIsSuccess\x18\x01 \x01(\bR\tIsSuccess*\xbb\x01\n" +
 	"\x19AuthorizationEnpointError\x12\x13\n" +
 	"\x0finvalid_request\x10\x00\x12\x11\n" +
 	"\rinvalid_scope\x10\x01\x12\x17\n" +
@@ -407,11 +572,13 @@ const file_auth_proto_rawDesc = "" +
 	"\x19unsupported_response_type\x10\x03\x12\x10\n" +
 	"\fserver_error\x10\x04\x12\x18\n" +
 	"\x14interaction_required\x10\x05\x12\x12\n" +
-	"\x0elogin_required\x10\x062\xcc\x01\n" +
+	"\x0elogin_required\x10\x062\xc0\x02\n" +
 	"\x13AuthenticateService\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x129\n" +
 	"\bCallback\x12\x15.auth.CallbackRequest\x1a\x16.auth.CallbackResponse\x12H\n" +
-	"\rValidateToken\x12\x1a.auth.ValidateTokenRequest\x1a\x1b.auth.ValidateTokenResponseB\x0fZ\rauth/api/authb\x06proto3"
+	"\rValidateToken\x12\x1a.auth.ValidateTokenRequest\x1a\x1b.auth.ValidateTokenResponse\x12>\n" +
+	"\fGetMyProfile\x12\x12.auth.EmptyRequest\x1a\x1a.auth.GetMyProfileResponse\x122\n" +
+	"\x06Logout\x12\x12.auth.EmptyRequest\x1a\x14.auth.LogoutResponseB\x0fZ\rauth/api/authb\x06proto3"
 
 var (
 	file_auth_proto_rawDescOnce sync.Once
@@ -426,7 +593,7 @@ func file_auth_proto_rawDescGZIP() []byte {
 }
 
 var file_auth_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_auth_proto_goTypes = []any{
 	(AuthorizationEnpointError)(0), // 0: auth.AuthorizationEnpointError
 	(*LoginRequest)(nil),           // 1: auth.LoginRequest
@@ -435,17 +602,24 @@ var file_auth_proto_goTypes = []any{
 	(*CallbackResponse)(nil),       // 4: auth.CallbackResponse
 	(*ValidateTokenRequest)(nil),   // 5: auth.ValidateTokenRequest
 	(*ValidateTokenResponse)(nil),  // 6: auth.ValidateTokenResponse
+	(*GetMyProfileResponse)(nil),   // 7: auth.GetMyProfileResponse
+	(*EmptyRequest)(nil),           // 8: auth.EmptyRequest
+	(*LogoutResponse)(nil),         // 9: auth.LogoutResponse
 }
 var file_auth_proto_depIdxs = []int32{
 	0, // 0: auth.CallbackRequest.Error:type_name -> auth.AuthorizationEnpointError
 	1, // 1: auth.AuthenticateService.Login:input_type -> auth.LoginRequest
 	3, // 2: auth.AuthenticateService.Callback:input_type -> auth.CallbackRequest
 	5, // 3: auth.AuthenticateService.ValidateToken:input_type -> auth.ValidateTokenRequest
-	2, // 4: auth.AuthenticateService.Login:output_type -> auth.LoginResponse
-	4, // 5: auth.AuthenticateService.Callback:output_type -> auth.CallbackResponse
-	6, // 6: auth.AuthenticateService.ValidateToken:output_type -> auth.ValidateTokenResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	8, // 4: auth.AuthenticateService.GetMyProfile:input_type -> auth.EmptyRequest
+	8, // 5: auth.AuthenticateService.Logout:input_type -> auth.EmptyRequest
+	2, // 6: auth.AuthenticateService.Login:output_type -> auth.LoginResponse
+	4, // 7: auth.AuthenticateService.Callback:output_type -> auth.CallbackResponse
+	6, // 8: auth.AuthenticateService.ValidateToken:output_type -> auth.ValidateTokenResponse
+	7, // 9: auth.AuthenticateService.GetMyProfile:output_type -> auth.GetMyProfileResponse
+	9, // 10: auth.AuthenticateService.Logout:output_type -> auth.LogoutResponse
+	6, // [6:11] is the sub-list for method output_type
+	1, // [1:6] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -462,7 +636,7 @@ func file_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_proto_rawDesc), len(file_auth_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
