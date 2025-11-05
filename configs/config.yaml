@@ -44,6 +44,8 @@ zitadel_configs:
   auth_domain: "https://e-commerce-golang-project-icglms.us1.zitadel.cloud"
   api_key_base64: "YOUR_API_KEY_BASE64"
   encrypt_key: "YOUR_ENCRYPT_KEY"
+  cookie_name: "ecommerce-cookie"
+  session_expired_seconds: 604800 # 1 week
 auth_token:
   rsa_key_pair_file_path: "apps/auth/resources/rsa-key-pair.pem"
   rsa_public_key_file_path: "apps/auth/resources/rsa-public.pem"

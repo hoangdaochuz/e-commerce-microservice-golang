@@ -40,8 +40,24 @@ message ValidateTokenResponse {
   // return other info
 }
 
+message GetMyProfileResponse {
+  string Username = 1;
+  string Email = 2;
+  string FirstName = 3;
+  string LastName = 4;
+  string Gender = 5;
+}
+
+message EmptyRequest{}
+
+message LogoutResponse{
+  bool IsSuccess = 1;
+}
+
 service AuthenticateService {
   rpc Login(LoginRequest) returns(LoginResponse);
   rpc Callback(CallbackRequest) returns(CallbackResponse);
   rpc ValidateToken(ValidateTokenRequest) returns(ValidateTokenResponse);
+  rpc GetMyProfile(EmptyRequest) returns (GetMyProfileResponse);
+  rpc Logout(EmptyRequest) returns (LogoutResponse);
 }

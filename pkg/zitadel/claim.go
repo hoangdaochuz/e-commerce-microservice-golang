@@ -17,4 +17,6 @@ type ZitadelClaim struct {
 	Metadata                     map[string]string            `json:"urn:zitadel:iam:user:metadata"`
 	IdToken                      string                       `json:"id_token"`
 	Token                        string                       `json:"token"`
+	Name                         string                       `json:"name"`
+	Gender                       string                       `json:"gender"`
 }

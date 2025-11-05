@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 	"time"
 
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
+	"github.com/spf13/viper"
 )
 
 func LoggingMiddleware(next http.Handler) http.Handler {
@@ -20,10 +22,12 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		frontEndUserDomain := viper.GetString("general_config.frontend_user_endpoint")
+
+		w.Header().Set("Access-Control-Allow-Origin", frontEndUserDomain)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -41,7 +45,29 @@ func ContentTypeMiddleware(next http.Handler) http.Handler {
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Implement authenticate middleware later
+		url := r.URL.Path
+		skipAuthPaths := []string{
+			"/api/v1/auth/Login",
+			"/api/v1/auth/Callback",
+			"/callback",
+		}
+		if slices.Contains(skipAuthPaths, url) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		cookieKey := viper.GetString("zitadel_configs.cookie_name")
+		cookie, err := r.Cookie(cookieKey)
+		if err != nil || cookie.Value == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			bodyByte, err := json.Marshal(map[string]string{
+				"error": "Not found cookie",
+			})
+			if err != nil {
+				log.Fatal("fail to marshal err response")
+			}
+			w.Write(bodyByte)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

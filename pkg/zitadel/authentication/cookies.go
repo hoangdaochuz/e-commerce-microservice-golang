@@ -37,7 +37,7 @@ func (h *HttpCookie) SetCookie(name, value, path string, seconds int) error {
 		MaxAge:   seconds,
 		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	})
 	return nil
 }
@@ -51,7 +51,7 @@ func (h *HttpCookie) DelCookie(name string, cookiePath string) error {
 		MaxAge:   -1,
 		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	})
 	return nil
 }

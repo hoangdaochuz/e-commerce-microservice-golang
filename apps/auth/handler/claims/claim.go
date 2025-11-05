@@ -21,6 +21,11 @@ type Claim struct {
 	AccessToken    string   `json:"access_token"`
 	RefreshToken   string   `json:"refresh_token"`
 	AuthSessionId  string   `json:"session_id"`
+	IdToken        string   `json:"id_token"`
+	Name           string   `json:"name"`
+	GivenName      string   `json:"given_name"`
+	FamilyName     string   `json:"family_name"`
+	Gender         string   `json:"gender"`
 	jwt.StandardClaims
 }
 
@@ -129,6 +134,12 @@ func (c *ClaimConverter) ConvertToInternalClaims(zitadelClaims *zitadel_pkg.Zita
 		},
 		AccessToken:   token,
 		AuthSessionId: req.SessionId,
+		IdToken:       req.TokenId,
+		Username:      zitadelClaims.PreferredUsername,
+		Name:          zitadelClaims.Name,
+		GivenName:     zitadelClaims.GivenName,
+		FamilyName:    zitadelClaims.FamilyName,
+		Gender:        zitadelClaims.Gender,
 		// RefreshToken: ,
 	}, nil
 }
