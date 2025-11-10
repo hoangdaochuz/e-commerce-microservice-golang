@@ -132,7 +132,7 @@ func NewAuthService() (*AuthService, error) {
 	}, nil
 }
 
-func (srv *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*custom_nats.Response, error) {
+func (srv *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*auth.RedirectResponse, error) {
 	reqCtx := ctx.Value(shared.HTTPRequest_ContextKey)
 	r := reqCtx.(*http.Request)
 	w := custom_nats.NewResponseBuilderWithHeader(nil)
@@ -148,9 +148,10 @@ func (srv *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*cus
 	if err != nil {
 		return nil, fmt.Errorf("fail to get login url: %w", err)
 	}
-	http.Redirect(w, r, loginURL, http.StatusFound)
-	response := w.Build()
-	return response, nil
+	return &auth.RedirectResponse{
+		IsSuccess:   true,
+		RedirectURL: loginURL,
+	}, nil
 }
 
 type BodyCallback struct {
@@ -191,7 +192,6 @@ func (srv *AuthService) Callback(ctx context.Context, req *auth.CallbackRequest)
 	r.URL.RawQuery = q.Encode()
 	r.Header = headers
 
-	// resCtx := ctx.Value(shared.HTTPResponse_ContextKey)
 	w := custom_nats.NewResponseBuilderWithHeader(nil)
 	err = srv.zitadelAuth.Callback(r, w, "/", func(zitadelClaim zitadel_pkg.ZitadelClaim, token *zitadel_authentication.Token, sessionId string) (*claims.Claim, error) {
 		converter := claims.NewClaimConverter()
@@ -234,7 +234,7 @@ func (srv *AuthService) GetMyProfile(ctx context.Context, req *auth.EmptyRequest
 	}, nil
 }
 
-func (srv *AuthService) Logout(ctx context.Context, req *auth.EmptyRequest) (*custom_nats.Response, error) {
+func (srv *AuthService) Logout(ctx context.Context, req *auth.EmptyRequest) (*auth.RedirectResponse, error) {
 	w := custom_nats.NewResponseBuilderWithHeader(nil)
 	rCtx := ctx.Value(shared.HTTPRequest_ContextKey)
 	r := rCtx.(*http.Request)
@@ -257,6 +257,8 @@ func (srv *AuthService) Logout(ctx context.Context, req *auth.EmptyRequest) (*cu
 		return nil, fmt.Errorf("end session url is empty")
 	}
 
-	http.Redirect(w, r, endSessionUrl, http.StatusFound)
-	return w.Build(), nil
+	return &auth.RedirectResponse{
+		IsSuccess:   true,
+		RedirectURL: endSessionUrl,
+	}, nil
 }

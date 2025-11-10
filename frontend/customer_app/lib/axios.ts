@@ -76,7 +76,7 @@ axiosInstance.interceptors.response.use(
         case 401:
           // Unauthorized 
           // call this func to redirect to login page
-          await authService.login({Username:""})
+          await authService.login({ Username: "" })
           break;
 
         case 403:

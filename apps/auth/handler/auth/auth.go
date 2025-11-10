@@ -23,7 +23,7 @@ func NewAuthServiceApp(authService *auth_service.AuthService) *AuthServiceApp {
 
 var _ = di.Make[*AuthServiceApp](NewAuthServiceApp)
 
-func (a *AuthServiceApp) Login(ctx context.Context, req *auth.LoginRequest) (*custom_nats.Response, error) {
+func (a *AuthServiceApp) Login(ctx context.Context, req *auth.LoginRequest) (*auth.RedirectResponse, error) {
 	return a.authService.Login(ctx, req)
 }
 
@@ -40,6 +40,6 @@ func (a *AuthServiceApp) GetMyProfile(ctx context.Context, req *auth.EmptyReques
 	return a.authService.GetMyProfile(ctx, req)
 }
 
-func (a *AuthServiceApp) Logout(ctx context.Context, req *auth.EmptyRequest) (*custom_nats.Response, error) {
+func (a *AuthServiceApp) Logout(ctx context.Context, req *auth.EmptyRequest) (*auth.RedirectResponse, error) {
 	return a.authService.Logout(ctx, req)
 }

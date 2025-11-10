@@ -30,11 +30,11 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthenticateServiceClient interface {
-	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*RedirectResponse, error)
 	Callback(ctx context.Context, in *CallbackRequest, opts ...grpc.CallOption) (*CallbackResponse, error)
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
 	GetMyProfile(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*GetMyProfileResponse, error)
-	Logout(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	Logout(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*RedirectResponse, error)
 }
 
 type authenticateServiceClient struct {
@@ -45,9 +45,9 @@ func NewAuthenticateServiceClient(cc grpc.ClientConnInterface) AuthenticateServi
 	return &authenticateServiceClient{cc}
 }
 
-func (c *authenticateServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+func (c *authenticateServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*RedirectResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LoginResponse)
+	out := new(RedirectResponse)
 	err := c.cc.Invoke(ctx, AuthenticateService_Login_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -85,9 +85,9 @@ func (c *authenticateServiceClient) GetMyProfile(ctx context.Context, in *EmptyR
 	return out, nil
 }
 
-func (c *authenticateServiceClient) Logout(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
+func (c *authenticateServiceClient) Logout(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*RedirectResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LogoutResponse)
+	out := new(RedirectResponse)
 	err := c.cc.Invoke(ctx, AuthenticateService_Logout_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -99,11 +99,11 @@ func (c *authenticateServiceClient) Logout(ctx context.Context, in *EmptyRequest
 // All implementations must embed UnimplementedAuthenticateServiceServer
 // for forward compatibility.
 type AuthenticateServiceServer interface {
-	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	Login(context.Context, *LoginRequest) (*RedirectResponse, error)
 	Callback(context.Context, *CallbackRequest) (*CallbackResponse, error)
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
 	GetMyProfile(context.Context, *EmptyRequest) (*GetMyProfileResponse, error)
-	Logout(context.Context, *EmptyRequest) (*LogoutResponse, error)
+	Logout(context.Context, *EmptyRequest) (*RedirectResponse, error)
 	mustEmbedUnimplementedAuthenticateServiceServer()
 }
 
@@ -114,7 +114,7 @@ type AuthenticateServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAuthenticateServiceServer struct{}
 
-func (UnimplementedAuthenticateServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
+func (UnimplementedAuthenticateServiceServer) Login(context.Context, *LoginRequest) (*RedirectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
 func (UnimplementedAuthenticateServiceServer) Callback(context.Context, *CallbackRequest) (*CallbackResponse, error) {
@@ -126,7 +126,7 @@ func (UnimplementedAuthenticateServiceServer) ValidateToken(context.Context, *Va
 func (UnimplementedAuthenticateServiceServer) GetMyProfile(context.Context, *EmptyRequest) (*GetMyProfileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMyProfile not implemented")
 }
-func (UnimplementedAuthenticateServiceServer) Logout(context.Context, *EmptyRequest) (*LogoutResponse, error) {
+func (UnimplementedAuthenticateServiceServer) Logout(context.Context, *EmptyRequest) (*RedirectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 func (UnimplementedAuthenticateServiceServer) mustEmbedUnimplementedAuthenticateServiceServer() {}

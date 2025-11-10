@@ -50,7 +50,7 @@ const (
 
 // AuthenticateService defines the service interface
 type AuthenticateService interface {
-	Login(ctx context.Context, req *LoginRequest) (*custom_nats.Response, error)
+	Login(ctx context.Context, req *LoginRequest) (*RedirectResponse, error)
 
 	Callback(ctx context.Context, req *CallbackRequest) (*custom_nats.Response, error)
 
@@ -58,7 +58,7 @@ type AuthenticateService interface {
 
 	GetMyProfile(ctx context.Context, req *EmptyRequest) (*GetMyProfileResponse, error)
 
-	Logout(ctx context.Context, req *EmptyRequest) (*custom_nats.Response, error)
+	Logout(ctx context.Context, req *EmptyRequest) (*RedirectResponse, error)
 }
 
 // AuthenticateServiceProxy wraps the service implementation
@@ -74,7 +74,7 @@ func NewAuthenticateServiceProxy(service AuthenticateService) *AuthenticateServi
 }
 
 // Login delegates the call to the underlying service
-func (p *AuthenticateServiceProxy) Login(ctx context.Context, req *LoginRequest) (*custom_nats.Response, error) {
+func (p *AuthenticateServiceProxy) Login(ctx context.Context, req *LoginRequest) (*RedirectResponse, error) {
 	return p.service.Login(ctx, req)
 }
 
@@ -94,7 +94,7 @@ func (p *AuthenticateServiceProxy) GetMyProfile(ctx context.Context, req *EmptyR
 }
 
 // Login delegates the call to underlying service
-func (p *AuthenticateServiceProxy) Logout(ctx context.Context, req *EmptyRequest) (*custom_nats.Response, error) {
+func (p *AuthenticateServiceProxy) Logout(ctx context.Context, req *EmptyRequest) (*RedirectResponse, error) {
 	return p.service.Logout(ctx, req)
 }
 

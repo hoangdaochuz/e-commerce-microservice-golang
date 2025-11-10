@@ -126,28 +126,28 @@ func (x *LoginRequest) GetUsername() string {
 	return ""
 }
 
-type LoginResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	IsSuccess        bool                   `protobuf:"varint,1,opt,name=IsSuccess,proto3" json:"IsSuccess,omitempty"`
-	RedirectLoginURL string                 `protobuf:"bytes,2,opt,name=RedirectLoginURL,proto3" json:"RedirectLoginURL,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+type RedirectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IsSuccess     bool                   `protobuf:"varint,1,opt,name=IsSuccess,proto3" json:"IsSuccess,omitempty"`
+	RedirectURL   string                 `protobuf:"bytes,2,opt,name=RedirectURL,proto3" json:"RedirectURL,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *LoginResponse) Reset() {
-	*x = LoginResponse{}
+func (x *RedirectResponse) Reset() {
+	*x = RedirectResponse{}
 	mi := &file_auth_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *LoginResponse) String() string {
+func (x *RedirectResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*LoginResponse) ProtoMessage() {}
+func (*RedirectResponse) ProtoMessage() {}
 
-func (x *LoginResponse) ProtoReflect() protoreflect.Message {
+func (x *RedirectResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_auth_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -159,21 +159,21 @@ func (x *LoginResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
-func (*LoginResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RedirectResponse.ProtoReflect.Descriptor instead.
+func (*RedirectResponse) Descriptor() ([]byte, []int) {
 	return file_auth_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *LoginResponse) GetIsSuccess() bool {
+func (x *RedirectResponse) GetIsSuccess() bool {
 	if x != nil {
 		return x.IsSuccess
 	}
 	return false
 }
 
-func (x *LoginResponse) GetRedirectLoginURL() string {
+func (x *RedirectResponse) GetRedirectURL() string {
 	if x != nil {
-		return x.RedirectLoginURL
+		return x.RedirectURL
 	}
 	return ""
 }
@@ -541,10 +541,10 @@ const file_auth_proto_rawDesc = "" +
 	"\n" +
 	"auth.proto\x12\x04auth\"*\n" +
 	"\fLoginRequest\x12\x1a\n" +
-	"\bUsername\x18\x01 \x01(\tR\bUsername\"Y\n" +
-	"\rLoginResponse\x12\x1c\n" +
-	"\tIsSuccess\x18\x01 \x01(\bR\tIsSuccess\x12*\n" +
-	"\x10RedirectLoginURL\x18\x02 \x01(\tR\x10RedirectLoginURL\"\x9e\x01\n" +
+	"\bUsername\x18\x01 \x01(\tR\bUsername\"R\n" +
+	"\x10RedirectResponse\x12\x1c\n" +
+	"\tIsSuccess\x18\x01 \x01(\bR\tIsSuccess\x12 \n" +
+	"\vRedirectURL\x18\x02 \x01(\tR\vRedirectURL\"\x9e\x01\n" +
 	"\x0fCallbackRequest\x12\x12\n" +
 	"\x04Code\x18\x01 \x01(\tR\x04Code\x12\x14\n" +
 	"\x05State\x18\x02 \x01(\tR\x05State\x125\n" +
@@ -572,13 +572,13 @@ const file_auth_proto_rawDesc = "" +
 	"\x19unsupported_response_type\x10\x03\x12\x10\n" +
 	"\fserver_error\x10\x04\x12\x18\n" +
 	"\x14interaction_required\x10\x05\x12\x12\n" +
-	"\x0elogin_required\x10\x062\xc0\x02\n" +
-	"\x13AuthenticateService\x120\n" +
-	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x129\n" +
+	"\x0elogin_required\x10\x062\xc5\x02\n" +
+	"\x13AuthenticateService\x123\n" +
+	"\x05Login\x12\x12.auth.LoginRequest\x1a\x16.auth.RedirectResponse\x129\n" +
 	"\bCallback\x12\x15.auth.CallbackRequest\x1a\x16.auth.CallbackResponse\x12H\n" +
 	"\rValidateToken\x12\x1a.auth.ValidateTokenRequest\x1a\x1b.auth.ValidateTokenResponse\x12>\n" +
-	"\fGetMyProfile\x12\x12.auth.EmptyRequest\x1a\x1a.auth.GetMyProfileResponse\x122\n" +
-	"\x06Logout\x12\x12.auth.EmptyRequest\x1a\x14.auth.LogoutResponseB\x0fZ\rauth/api/authb\x06proto3"
+	"\fGetMyProfile\x12\x12.auth.EmptyRequest\x1a\x1a.auth.GetMyProfileResponse\x124\n" +
+	"\x06Logout\x12\x12.auth.EmptyRequest\x1a\x16.auth.RedirectResponseB\x0fZ\rauth/api/authb\x06proto3"
 
 var (
 	file_auth_proto_rawDescOnce sync.Once
@@ -597,7 +597,7 @@ var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_auth_proto_goTypes = []any{
 	(AuthorizationEnpointError)(0), // 0: auth.AuthorizationEnpointError
 	(*LoginRequest)(nil),           // 1: auth.LoginRequest
-	(*LoginResponse)(nil),          // 2: auth.LoginResponse
+	(*RedirectResponse)(nil),       // 2: auth.RedirectResponse
 	(*CallbackRequest)(nil),        // 3: auth.CallbackRequest
 	(*CallbackResponse)(nil),       // 4: auth.CallbackResponse
 	(*ValidateTokenRequest)(nil),   // 5: auth.ValidateTokenRequest
@@ -613,11 +613,11 @@ var file_auth_proto_depIdxs = []int32{
 	5, // 3: auth.AuthenticateService.ValidateToken:input_type -> auth.ValidateTokenRequest
 	8, // 4: auth.AuthenticateService.GetMyProfile:input_type -> auth.EmptyRequest
 	8, // 5: auth.AuthenticateService.Logout:input_type -> auth.EmptyRequest
-	2, // 6: auth.AuthenticateService.Login:output_type -> auth.LoginResponse
+	2, // 6: auth.AuthenticateService.Login:output_type -> auth.RedirectResponse
 	4, // 7: auth.AuthenticateService.Callback:output_type -> auth.CallbackResponse
 	6, // 8: auth.AuthenticateService.ValidateToken:output_type -> auth.ValidateTokenResponse
 	7, // 9: auth.AuthenticateService.GetMyProfile:output_type -> auth.GetMyProfileResponse
-	9, // 10: auth.AuthenticateService.Logout:output_type -> auth.LogoutResponse
+	2, // 10: auth.AuthenticateService.Logout:output_type -> auth.RedirectResponse
 	6, // [6:11] is the sub-list for method output_type
 	1, // [1:6] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
