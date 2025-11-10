@@ -6,9 +6,9 @@ message LoginRequest {
   string Username = 1;
 }
 
-message LoginResponse {
+message RedirectResponse {
   bool IsSuccess  = 1;
-  string RedirectLoginURL = 2;
+  string RedirectURL = 2;
 }
 
 enum AuthorizationEnpointError {
@@ -55,9 +55,9 @@ message LogoutResponse{
 }
 
 service AuthenticateService {
-  rpc Login(LoginRequest) returns(LoginResponse);
+  rpc Login(LoginRequest) returns(RedirectResponse);
   rpc Callback(CallbackRequest) returns(CallbackResponse);
   rpc ValidateToken(ValidateTokenRequest) returns(ValidateTokenResponse);
   rpc GetMyProfile(EmptyRequest) returns (GetMyProfileResponse);
-  rpc Logout(EmptyRequest) returns (LogoutResponse);
+  rpc Logout(EmptyRequest) returns (RedirectResponse);
 }

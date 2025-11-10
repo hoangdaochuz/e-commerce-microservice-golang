@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
@@ -15,6 +16,7 @@ import (
 	redis_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/redis"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
+	"github.com/spf13/viper"
 )
 
 type APIGateway struct {
@@ -96,6 +98,18 @@ func (gw *APIGateway) ServeHTTP() func(http.ResponseWriter, *http.Request) {
 		if err != nil {
 			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		if strings.Contains(r.URL.Path, "Logout") {
+			// clear cookie
+			http.SetCookie(w, &http.Cookie{
+				Name:     viper.GetString("zitadel_configs.cookie_name"),
+				Path:     "/",
+				Domain:   "",
+				MaxAge:   -1,
+				Secure:   true,
+				HttpOnly: true,
+				SameSite: http.SameSiteNoneMode,
+			})
 		}
 
 		gw.writeResponse(w, natsResponse)
