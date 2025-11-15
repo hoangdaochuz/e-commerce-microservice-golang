@@ -34,21 +34,6 @@ func main() {
 		Addr:    ":" + config.Apigateway.Port,
 		Handler: mux,
 	}
-	// natsCircuitBreakerConfig := config.CircuitBreaker.Defaults
-	// circuitBreakerRegistry := circuitbreaker.GetRegistry[*nats.Msg]()
-	// natsCircuitBreaker, err := circuitBreakerRegistry.GetOrCreateBreaker(shared.NATS_CIRCUIT_BREAKER, &circuitbreaker.Config{
-	// 	Name:                 shared.NATS_CIRCUIT_BREAKER,
-	// 	MaxRequests:          natsCircuitBreakerConfig.MaxRequest,
-	// 	Interval:             natsCircuitBreakerConfig.Interval,
-	// 	Timeout:              natsCircuitBreakerConfig.Timeout,
-	// 	FailureThreshold:     natsCircuitBreakerConfig.FailureThreshold,
-	// 	FailureRateThreshold: natsCircuitBreakerConfig.FailureRateThreshold,
-	// })
-	// if err != nil {
-	// 	log.Fatal("fail to create circuit breaker for nats")
-	// }
-
-	// natsConnWithCircuitBreaker := custom_nats.NewNatsConnWithCircuitBreaker(natsConn, natsCircuitBreaker)
 
 	gateway := apigateway.NewAPIGateway(natsConn, apigatewayServer, mux, ctx)
 	di.Make[*apigateway.APIGateway](func() *apigateway.APIGateway {
