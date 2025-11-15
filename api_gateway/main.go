@@ -14,13 +14,12 @@ import (
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
 	redis_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/redis"
-	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
 
 type APIGateway struct {
-	natsConn *nats.Conn
+	natsConn *custom_nats.NatsConnWithCircuitBreaker
 	timeout  time.Duration
 	server   *http.Server
 	mux      *http.ServeMux
@@ -28,7 +27,7 @@ type APIGateway struct {
 	// ctx      context.Context
 }
 
-func NewAPIGateway(natsConn *nats.Conn, server *http.Server, mux *http.ServeMux, ctx context.Context) *APIGateway {
+func NewAPIGateway(natsConn *custom_nats.NatsConnWithCircuitBreaker, server *http.Server, mux *http.ServeMux, ctx context.Context) *APIGateway {
 	gateway := &APIGateway{
 		natsConn: natsConn,
 		timeout:  30 * time.Second,
@@ -87,7 +86,12 @@ func (gw *APIGateway) ServeHTTP() func(http.ResponseWriter, *http.Request) {
 			gw.sendErrorResponse(w, fmt.Errorf("fail to marshal nats request: %w", err).Error(), http.StatusInternalServerError)
 			return
 		}
-		msgResponse, err := gw.natsConn.Request(natsReq.Subject, natsReqByte, gw.timeout)
+		ctx, _ := context.WithTimeout(context.Background(), gw.timeout)
+		natsSendRequest := &custom_nats.NatsSendRequest{
+			Subject: natsReq.Subject,
+			Content: natsReqByte,
+		}
+		msgResponse, err := gw.natsConn.SendRequest(ctx, natsSendRequest)
 		if err != nil {
 			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -166,5 +170,5 @@ func (gw *APIGateway) Stop() error {
 	if err != nil {
 		return err
 	}
-	return gw.natsConn.Drain()
+	return gw.natsConn.GetNatsConn().Drain()
 }
