@@ -15,7 +15,6 @@ type Breaker[T any] struct {
 }
 
 func NewBreaker[T any](cfg *Config) *Breaker[T] {
-	fmt.Println("cfg [NewBreaker]: ", cfg)
 	breaker := &Breaker[T]{
 		cb: (*gobreaker.CircuitBreaker[T])(gobreaker.NewCircuitBreaker[T](gobreaker.Settings{
 			Name:        cfg.Name,
@@ -32,7 +31,6 @@ func NewBreaker[T any](cfg *Config) *Breaker[T] {
 		})),
 		config: cfg,
 	}
-	fmt.Println("breaker [NewBreaker]: ", breaker)
 	return breaker
 }
 

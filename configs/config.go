@@ -245,3 +245,15 @@ func Load() (*Config, error) {
 	}
 	return &config, nil
 }
+
+func LoadNatsCircuitBreakerConfigByServiceName(serviceName string) *CircuitBreakerCommon {
+	result := &CircuitBreakerCommon{
+		MaxRequest:           viper.GetInt(fmt.Sprintf("circuit_breaker.nats.services.%s.max_requests", serviceName)),
+		Interval:             viper.GetInt(fmt.Sprintf("circuit_breaker.nats.services.%s.interval", serviceName)),
+		Timeout:              viper.GetInt(fmt.Sprintf("circuit_breaker.nats.services.%s.timeout", serviceName)),
+		FailureThreshold:     viper.GetInt(fmt.Sprintf("circuit_breaker.nats.services.%s.failure_threshold", serviceName)),
+		FailureRateThreshold: viper.GetFloat64(fmt.Sprintf("circuit_breaker.nats.services.%s.failure_rate_threshold", serviceName)),
+		MinRequests:          viper.GetInt(fmt.Sprintf("circuit_breaker.nats.services.%s.min_requests", serviceName)),
+	}
+	return result
+}
