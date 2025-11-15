@@ -10,16 +10,18 @@ import (
 	"time"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/circuitbreaker"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
 	redis_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/redis"
+	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
 
 type APIGateway struct {
-	natsConn *custom_nats.NatsConnWithCircuitBreaker
+	natsConn *nats.Conn
 	timeout  time.Duration
 	server   *http.Server
 	mux      *http.ServeMux
@@ -27,7 +29,7 @@ type APIGateway struct {
 	// ctx      context.Context
 }
 
-func NewAPIGateway(natsConn *custom_nats.NatsConnWithCircuitBreaker, server *http.Server, mux *http.ServeMux, ctx context.Context) *APIGateway {
+func NewAPIGateway(natsConn *nats.Conn, server *http.Server, mux *http.ServeMux, ctx context.Context) *APIGateway {
 	gateway := &APIGateway{
 		natsConn: natsConn,
 		timeout:  30 * time.Second,
@@ -80,18 +82,30 @@ func (gw *APIGateway) ServeHTTP() func(http.ResponseWriter, *http.Request) {
 		natsReq.AddHeader("X-User-Id", "test@1234")
 		// continue add if we want
 
+		serviceName := natsReq.GetServiceName()
+		circuitBreakerConfigService := configs.LoadNatsCircuitBreakerConfigByServiceName(serviceName)
+		cbRegistry := circuitbreaker.GetRegistry[*nats.Msg]()
+		breaker, err := cbRegistry.GetOrCreateBreaker(serviceName, circuitbreaker.ToCircuitBreakerConfig(serviceName, circuitBreakerConfigService))
+		if err != nil {
+			gw.sendErrorResponse(w, fmt.Errorf("fail to get or create a circuit breaker: %w", err).Error(), http.StatusInternalServerError)
+			return
+		}
+
+		natsConnWithCircuitBreakerWrapper := custom_nats.NewNatsConnWithCircuitBreaker(gw.natsConn, breaker)
+
 		// natsSubject := natsReq.Subject
 		natsReqByte, err := json.Marshal(*natsReq)
 		if err != nil {
 			gw.sendErrorResponse(w, fmt.Errorf("fail to marshal nats request: %w", err).Error(), http.StatusInternalServerError)
 			return
 		}
-		ctx, _ := context.WithTimeout(context.Background(), gw.timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), gw.timeout)
+		defer cancel()
 		natsSendRequest := &custom_nats.NatsSendRequest{
 			Subject: natsReq.Subject,
 			Content: natsReqByte,
 		}
-		msgResponse, err := gw.natsConn.SendRequest(ctx, natsSendRequest)
+		msgResponse, err := natsConnWithCircuitBreakerWrapper.SendRequest(ctx, natsSendRequest)
 		if err != nil {
 			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -170,5 +184,5 @@ func (gw *APIGateway) Stop() error {
 	if err != nil {
 		return err
 	}
-	return gw.natsConn.GetNatsConn().Drain()
+	return gw.natsConn.Drain()
 }

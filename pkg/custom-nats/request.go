@@ -22,11 +22,12 @@ func init() {
 }
 
 type Request struct {
-	Header  map[string][]string
-	Method  string
-	Body    []byte
-	URL     string
-	Subject string
+	Header      map[string][]string
+	Method      string
+	Body        []byte
+	URL         string
+	Subject     string
+	ServiceName string
 }
 
 var specialEnpointMap = map[string]string{
@@ -34,12 +35,14 @@ var specialEnpointMap = map[string]string{
 }
 
 func NewRequest(header map[string][]string, method, url, subject string, body []byte) *Request {
+	serviceName := strings.Split(subject, "/")[3]
 	return &Request{
-		Header:  header,
-		Method:  method,
-		Body:    body,
-		URL:     url,
-		Subject: subject,
+		Header:      header,
+		Method:      method,
+		Body:        body,
+		URL:         url,
+		Subject:     subject,
+		ServiceName: serviceName,
 	}
 }
 
@@ -50,6 +53,10 @@ func (r *Request) AddHeader(key, value string) {
 	} else {
 		r.Header[key] = []string{value}
 	}
+}
+
+func (r *Request) GetServiceName() string {
+	return r.ServiceName
 }
 
 func buildNatsSubjectFromPath(path string) string {
@@ -103,6 +110,8 @@ func convertHttpGetRequestToNatsPostRequest(r http.Request) (*Request, error) {
 	}
 	subject := buildNatsSubjectFromPath(path)
 
+	serviceName := strings.Split(subject, "/")[3]
+
 	urlString := host + path
 	headers := make(map[string][]string)
 	for key, values := range r.Header {
@@ -114,11 +123,12 @@ func convertHttpGetRequestToNatsPostRequest(r http.Request) (*Request, error) {
 	}
 
 	return &Request{
-		Method:  "POST",
-		Body:    body,
-		Header:  headers,
-		Subject: subject,
-		URL:     urlString,
+		Method:      "POST",
+		Body:        body,
+		Header:      headers,
+		Subject:     subject,
+		URL:         urlString,
+		ServiceName: serviceName,
 	}, nil
 }
 
@@ -132,6 +142,7 @@ func HttpRequestToNatsRequest(r http.Request) (*Request, error) {
 	host := urlObject.Host
 	path := urlObject.Path
 	subject := buildNatsSubjectFromPath(path)
+	serviceName := strings.Split(subject, "/")[3]
 	if path[0] != '/' {
 		path = "/" + path
 	}
@@ -157,11 +168,12 @@ func HttpRequestToNatsRequest(r http.Request) (*Request, error) {
 	}
 
 	return &Request{
-		Method:  method,
-		URL:     urlString,
-		Header:  headers,
-		Body:    body,
-		Subject: subject,
+		Method:      method,
+		URL:         urlString,
+		Header:      headers,
+		Body:        body,
+		Subject:     subject,
+		ServiceName: serviceName,
 	}, nil
 }
 
