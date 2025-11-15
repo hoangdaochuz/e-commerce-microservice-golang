@@ -68,6 +68,36 @@ type GeneralConfig struct {
 	FrontendAdminEndpoint string `mapstructure:"frontent_admin_endpoint"`
 }
 
+type CircuitBreakerCommon struct {
+	MaxRequest           int     `mapstructure:"max_requests"`
+	Interval             int     `mapstructure:"interval"`
+	Timeout              int     `mapstructure:"timeout"`
+	FailureThreshold     int     `mapstructure:"failure_threshold"`
+	FailureRateThreshold float64 `mapstructure:"failure_rate_threshold"`
+	MinRequests          int     `mapstructure:"min_requests"`
+}
+
+type CircuitBreakerNats struct {
+	Services map[string]CircuitBreakerCommon `mapstructure:"services"`
+}
+
+type CircuitBreakerDatabases struct {
+	CircuitBreakerCommon
+	SeparateReadWrite bool `mapstructure:"separate_read_write"`
+	FallbackToMemory  bool `mapstructure:"fallback_to_memory"`
+}
+
+type CircuitBreakerExternalAPIs struct {
+	Zitadel CircuitBreakerCommon `mapstructure:"zitadel"`
+}
+
+type CircuitBreaker struct {
+	Defaults     CircuitBreakerCommon       `mapstructure:"defaults"`
+	Databases    CircuitBreakerDatabases    `mapstructure:"databases"`
+	Nats         CircuitBreakerNats         `mapstructure:"nats"`
+	ExternalAPIs CircuitBreakerExternalAPIs `mapstructure:"external_apis"`
+}
+
 type Config struct {
 	ServiceRegistry ServiceRegistryConfig `mapstructure:"service_registry"`
 	Apigateway      ApigatewayConfig      `mapstructure:"apigateway"`
@@ -77,6 +107,7 @@ type Config struct {
 	ZitadelConfigs  ZitadelConfigs        `mapstructure:"zitadel_configs"`
 	AuthToken       AuthToken             `mapstructure:"auth_token"`
 	GeneralConfig   GeneralConfig         `mapstructure:"general_config"`
+	CircuitBreaker  CircuitBreaker        `mapstructure:"circuit_breaker"`
 	// Database --> Later
 	// Log --> Later
 }
@@ -136,6 +167,45 @@ func setDefaults() {
 	viper.SetDefault("general_config.backend_endpoint", "http://localhost:8080")
 	viper.SetDefault("general_config.frontend_user_endpoint", "http://localhost:3000")
 	viper.SetDefault("general_config.frontend_admin_endpoint", "http://localhost:3001")
+
+	// Circuit Breaker
+	viper.SetDefault("circuit_breaker.defaults.max_requests", 3)
+	viper.SetDefault("circuit_breaker.defaults.interval", 60)
+	viper.SetDefault("circuit_breaker.defaults.timeout", 120)
+	viper.SetDefault("circuit_breaker.defaults.failure_threshold", 5)
+	viper.SetDefault("circuit_breaker.defaults.failure_rate_threshold", 0.6)
+	viper.SetDefault("circuit_breaker.defaults.min_requests", 10)
+
+	viper.SetDefault("circuit_breaker.nats.services.auth.max_requests", 3)
+	viper.SetDefault("circuit_breaker.nats.services.auth.interval", 30)
+	viper.SetDefault("circuit_breaker.nats.services.auth.timeout", 20)
+	viper.SetDefault("circuit_breaker.nats.services.auth.failure_threshold", 3)
+	viper.SetDefault("circuit_breaker.nats.services.auth.failure_rate_threshold", 0.4)
+	viper.SetDefault("circuit_breaker.nats.services.auth.min_requests", 10)
+
+	viper.SetDefault("circuit_breaker.nats.services.order.max_requests", 3)
+	viper.SetDefault("circuit_breaker.nats.services.order.interval", 30)
+	viper.SetDefault("circuit_breaker.nats.services.order.timeout", 20)
+	viper.SetDefault("circuit_breaker.nats.services.order.failure_threshold", 3)
+	viper.SetDefault("circuit_breaker.nats.services.order.failure_rate_threshold", 0.4)
+	viper.SetDefault("circuit_breaker.nats.services.order.min_requests", 10)
+
+	viper.SetDefault("circuit_breaker.databases.max_requests", 3)
+	viper.SetDefault("circuit_breaker.databases.interval", 30)
+	viper.SetDefault("circuit_breaker.databases.timeout", 20)
+	viper.SetDefault("circuit_breaker.databases.failure_threshold", 5)
+	viper.SetDefault("circuit_breaker.databases.failure_rate_threshold", 0.4)
+	viper.SetDefault("circuit_breaker.databases.min_requests", 10)
+	viper.SetDefault("circuit_breaker.databases.separate_read_write", true)
+	viper.SetDefault("circuit_breaker.databases.fallback_to_memory", true)
+
+	viper.SetDefault("circuit_breaker.external_apis.zitadel.max_requests", 3)
+	viper.SetDefault("circuit_breaker.external_apis.zitadel.interval", 30)
+	viper.SetDefault("circuit_breaker.external_apis.zitadel.timeout", 20)
+	viper.SetDefault("circuit_breaker.external_apis.zitadel.failure_threshold", 5)
+	viper.SetDefault("circuit_breaker.external_apis.zitadel.failure_rate_threshold", 0.4)
+	viper.SetDefault("circuit_breaker.external_apis.zitadel.min_requests", 10)
+
 }
 
 func init() {

@@ -11,7 +11,10 @@ import (
 
 	apigateway "github.com/hoangdaochuz/ecommerce-microservice-golang/api_gateway"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/circuitbreaker"
+	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/shared"
 	"github.com/nats-io/nats.go"
 )
 
@@ -34,12 +37,30 @@ func main() {
 		Addr:    ":" + config.Apigateway.Port,
 		Handler: mux,
 	}
+	natsCircuitBreakerConfig := config.CircuitBreaker.Defaults
+	circuitBreakerRegistry := circuitbreaker.GetRegistry[*nats.Msg]()
+	fmt.Println("circuitBreakerRegistry: ", circuitBreakerRegistry)
+	natsCircuitBreaker, err := circuitBreakerRegistry.GetOrCreateBreaker(shared.NATS_CIRCUIT_BREAKER, &circuitbreaker.Config{
+		Name:                 shared.NATS_CIRCUIT_BREAKER,
+		MaxRequests:          natsCircuitBreakerConfig.MaxRequest,
+		Interval:             natsCircuitBreakerConfig.Interval,
+		Timeout:              natsCircuitBreakerConfig.Timeout,
+		FailureThreshold:     natsCircuitBreakerConfig.FailureThreshold,
+		FailureRateThreshold: natsCircuitBreakerConfig.FailureRateThreshold,
+	})
+	if err != nil {
+		log.Fatal("fail to create circuit breaker for nats")
+	}
+	fmt.Println("natsCircuitBreaker: ", natsCircuitBreaker)
 
-	gateway := apigateway.NewAPIGateway(natsConn, apigatewayServer, mux, ctx)
+	natsConnWithCircuitBreaker := custom_nats.NewNatsConnWithCircuitBreaker(natsConn, natsCircuitBreaker)
+
+	gateway := apigateway.NewAPIGateway(natsConnWithCircuitBreaker, apigatewayServer, mux, ctx)
 	di.Make[*apigateway.APIGateway](func() *apigateway.APIGateway {
 		return gateway
 	})
 	err = gateway.Start()
+	fmt.Println("hello, what is this")
 	if err != nil {
 		err = gateway.Stop()
 		if err != nil {
