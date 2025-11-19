@@ -96,8 +96,8 @@ circuit_breaker:
   external_apis:
     zitadel:
       max_requests: 3
-      interval: 30
-      timeout: 20
-      failure_threshold: 5
+      interval: 120
+      timeout: 60
+      failure_threshold: 10
       failure_rate_threshold: 0.4
       min_requests: 10

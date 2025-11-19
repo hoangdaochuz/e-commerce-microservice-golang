@@ -10,9 +10,12 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/auth/api/auth"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/auth/handler/claims"
 	auth_session "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/auth/handler/session"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	cache_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/cache"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/circuitbreaker"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/httpclient"
 	zitadel_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel"
 	zitadel_authentication "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel/authentication"
 	zitadel_authorization "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel/authorization"
@@ -21,9 +24,10 @@ import (
 )
 
 type AuthService struct {
-	ctx               context.Context
-	zitadelAuth       *zitadel_authentication.Auth[claims.Claim]
-	zitadelAuthorizer zitadel_authorization.Authorizer
+	// ctx context.Context
+	// zitadelAuth       *zitadel_authentication.Auth[claims.Claim]
+	zitadelAuthBreaker *zitadel_authentication.AuthBreaker[claims.Claim]
+	zitadelAuthorizer  zitadel_authorization.Authorizer
 	// cookieHandler     zitadel_authentication.CookieHandler
 }
 
@@ -125,10 +129,24 @@ func NewAuthService() (*AuthService, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fail to create authorizer: %w", err)
 	}
+
+	zitadelCircuitBreakerConfig := configs.LoadExternalApiCircuitBreakerConfigByApiProviderName("zitadel")
+	zitadelAuthBreakerRegistry := circuitbreaker.GetRegistry[*httpclient.HTTPResponse]()
+	zitadelHTTPBreaker, err := zitadelAuthBreakerRegistry.GetOrCreateBreaker(shared.ZITADEL_CIRCUIT_BREAKER, circuitbreaker.ToCircuitBreakerConfig(shared.ZITADEL_CIRCUIT_BREAKER, zitadelCircuitBreakerConfig))
+	if err != nil {
+		return nil, fmt.Errorf("fail to get or create zitadel auth breaker: %w", err)
+	}
+	authBreakerConfig := &zitadel_authentication.AuthBreakerConfig{
+		HttpClientConfig: httpclient.DefaultConfig(),
+		Breaker:          zitadelHTTPBreaker,
+		IsEnableCache:    false,
+		// CacheTTL: ,
+	}
+
 	return &AuthService{
 		// ctx:               ctx,
-		zitadelAuth:       zitadelAuth,
-		zitadelAuthorizer: authorizer,
+		zitadelAuthBreaker: zitadel_authentication.NewAuthBreaker(authBreakerConfig, *zitadelAuth, nil),
+		zitadelAuthorizer:  authorizer,
 	}, nil
 }
 
@@ -137,7 +155,7 @@ func (srv *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*aut
 	r := reqCtx.(*http.Request)
 	w := custom_nats.NewResponseBuilderWithHeader(nil)
 
-	loginURL, err := srv.zitadelAuth.AuthCodeUrl(r, w, viper.GetString(FRONTEND_USER_ENDPOINT_KEY), func() []zitadel_authentication.ScopeOps {
+	loginURL, err := srv.zitadelAuthBreaker.AuthCodeUrl(r, w, viper.GetString(FRONTEND_USER_ENDPOINT_KEY), func() []zitadel_authentication.ScopeOps {
 		var scopes []zitadel_authentication.ScopeOps
 		scopes = append(scopes, getDefaultScopes()...)
 		scopes = append(scopes, getProjectRoleScopes("admin")...)
@@ -193,7 +211,7 @@ func (srv *AuthService) Callback(ctx context.Context, req *auth.CallbackRequest)
 	r.Header = headers
 
 	w := custom_nats.NewResponseBuilderWithHeader(nil)
-	err = srv.zitadelAuth.Callback(r, w, "/", func(zitadelClaim zitadel_pkg.ZitadelClaim, token *zitadel_authentication.Token, sessionId string) (*claims.Claim, error) {
+	err = srv.zitadelAuthBreaker.Callback(r, w, "/", func(zitadelClaim zitadel_pkg.ZitadelClaim, token *zitadel_authentication.Token, sessionId string) (*claims.Claim, error) {
 		converter := claims.NewClaimConverter()
 		claims, err := converter.ConvertToInternalClaims(&zitadelClaim, claims.ClaimConverterRequest{
 			SessionId: sessionId,
@@ -204,7 +222,7 @@ func (srv *AuthService) Callback(ctx context.Context, req *auth.CallbackRequest)
 			return nil, err
 		}
 		return claims, nil
-	})
+	}, srv.zitadelAuthBreaker)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +239,7 @@ func (srv *AuthService) GetMyProfile(ctx context.Context, req *auth.EmptyRequest
 	r := rCtx.(*http.Request)
 	httpCookieHandler := zitadel_authentication.NewHttpCookie(r, nil)
 
-	claims, err := srv.zitadelAuth.GetCurrentUser(ctx, httpCookieHandler)
+	claims, err := srv.zitadelAuthBreaker.GetCurrentUser(ctx, httpCookieHandler)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get current user: %w", err)
 	}
@@ -241,7 +259,7 @@ func (srv *AuthService) Logout(ctx context.Context, req *auth.EmptyRequest) (*au
 
 	httpCookieHandler := zitadel_authentication.NewHttpCookie(r, w)
 
-	claims, err := srv.zitadelAuth.GetCurrentUser(ctx, httpCookieHandler)
+	claims, err := srv.zitadelAuthBreaker.GetCurrentUser(ctx, httpCookieHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +267,7 @@ func (srv *AuthService) Logout(ctx context.Context, req *auth.EmptyRequest) (*au
 		return nil, fmt.Errorf("claims is empty")
 	}
 	idToken := claims.IdToken
-	endSessionUrl, err := srv.zitadelAuth.LogoutUrl(httpCookieHandler, "/", idToken, srv.zitadelAuth.Config.PostLoginSuccessURI)
+	endSessionUrl, err := srv.zitadelAuthBreaker.LogoutUrl(httpCookieHandler, "/", idToken, srv.zitadelAuthBreaker.Config.PostLoginSuccessURI)
 	if err != nil {
 		return nil, err
 	}

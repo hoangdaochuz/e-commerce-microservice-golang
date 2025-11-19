@@ -246,6 +246,17 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
+func LoadDefaultCircuitBreakerConfig() *CircuitBreakerCommon {
+	return &CircuitBreakerCommon{
+		MaxRequest:           viper.GetInt("circuit_breaker.defaults.max_requests"),
+		Interval:             viper.GetInt("circuit_breaker.defaults.interval"),
+		Timeout:              viper.GetInt("circuit_breaker.defaults.timeout"),
+		FailureThreshold:     viper.GetInt("circuit_breaker.defaults.failure_threshold"),
+		FailureRateThreshold: viper.GetFloat64("circuit_breaker.defaults.failure_rate_threshold"),
+		MinRequests:          viper.GetInt("circuit_breaker.defaults.min_requests"),
+	}
+}
+
 func LoadNatsCircuitBreakerConfigByServiceName(serviceName string) *CircuitBreakerCommon {
 	result := &CircuitBreakerCommon{
 		MaxRequest:           viper.GetInt(fmt.Sprintf("circuit_breaker.nats.services.%s.max_requests", serviceName)),
@@ -256,4 +267,15 @@ func LoadNatsCircuitBreakerConfigByServiceName(serviceName string) *CircuitBreak
 		MinRequests:          viper.GetInt(fmt.Sprintf("circuit_breaker.nats.services.%s.min_requests", serviceName)),
 	}
 	return result
+}
+
+func LoadExternalApiCircuitBreakerConfigByApiProviderName(provider string) *CircuitBreakerCommon {
+	return &CircuitBreakerCommon{
+		MaxRequest:           viper.GetInt(fmt.Sprintf("circuit_breaker.external_apis.%s.max_requests", provider)),
+		Interval:             viper.GetInt(fmt.Sprintf("circuit_breaker.external_apis.%s.interval", provider)),
+		Timeout:              viper.GetInt(fmt.Sprintf("circuit_breaker.external_apis.%s.timeout", provider)),
+		FailureThreshold:     viper.GetInt(fmt.Sprintf("circuit_breaker.external_apis.%s.failure_threshold", provider)),
+		FailureRateThreshold: viper.GetFloat64(fmt.Sprintf("circuit_breaker.external_apis.%s.failure_rate_threshold", provider)),
+		MinRequests:          viper.GetInt(fmt.Sprintf("circuit_breaker.external_apis.%s.min_requests", provider)),
+	}
 }

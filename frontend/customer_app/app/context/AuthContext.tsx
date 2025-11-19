@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, CartItem } from "../types/patient";
-import { authService, LoginRequest, LoginResponse } from "@/services/authService";
+import { authService, LoginRequest, RedirectResponse } from "@/services/authService";
 
 interface AuthContextType {
   user: User | null;
@@ -12,7 +12,7 @@ interface AuthContextType {
   addToCart: (item: CartItem) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
-  handleSignIn: (request: LoginRequest) => Promise<LoginResponse>;
+  handleSignIn: (request: LoginRequest) => Promise<RedirectResponse>;
   handleSignOut: () => void;
 }
 
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })()
   }, []);
 
-  const handleSignIn = async (request: LoginRequest): Promise<LoginResponse> => {
+  const handleSignIn = async (request: LoginRequest): Promise<RedirectResponse> => {
     const response = await authService.login(request);
     // if (response)
     return response;

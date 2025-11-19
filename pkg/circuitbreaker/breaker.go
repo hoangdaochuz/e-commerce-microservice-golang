@@ -52,17 +52,26 @@ func (b *Breaker[T]) Do(ctx context.Context, handler func() (T, error)) (*T, err
 	return &result, nil
 }
 
-func (b *Breaker[T]) DoWithCallback(handler func() (T, error), fallback func() (T, error)) (*T, error) {
-	res, err := b.cb.Execute(handler)
-	if err != nil {
-		if fallback != nil {
-			resultFallback, errFallback := fallback()
-			if errFallback != nil {
-				return nil, fmt.Errorf("primary err: %w, fallback err: %w", err, errFallback)
-			}
-			return &resultFallback, nil
+func (b *Breaker[T]) DoWithCallback(ctx context.Context, handler func() (T, error), fallback func() (T, error)) (*T, error) {
+	var zeroValue T
+	res, err := b.cb.Execute(func() (T, error) {
+		select {
+		case <-ctx.Done():
+			return zeroValue, ctx.Err()
+		default:
 		}
-		return nil, err
+		result, err1 := handler()
+		if err1 != nil {
+			result2, err2 := fallback()
+			if err2 != nil {
+				return zeroValue, fmt.Errorf("%s", fmt.Sprintf("fail to perform primary handler: %s and fallback: %s", err1, err2))
+			}
+			return result2, nil
+		}
+		return result, nil
+	})
+	if err != nil {
+		return &zeroValue, err
 	}
 	return &res, nil
 }
