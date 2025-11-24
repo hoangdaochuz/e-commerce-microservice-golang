@@ -13,9 +13,11 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/circuitbreaker"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/metric"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
 	redis_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/redis"
 	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
@@ -152,18 +154,24 @@ func (gw *APIGateway) Start() error {
 	})
 	defer redisClient.Close()
 	rateLimiter := ratelimiter.NewRateLimiter(redisClient, 50, 1*time.Minute, gw.ctx)
+
+	registryWrapper := metric.NewMetricWrapper()
+	registryWrapper.RegisterCollectorDefault()
+	registry := registryWrapper.GetRegistry()
+
 	rootHandler := http.HandlerFunc(gw.ServeHTTP())
 	_ = useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), LoggingMiddleware)
-	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), AuthMiddleware, LoggingMiddleware)
+	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), MetricMiddleware(registry), AuthMiddleware, LoggingMiddleware)
 	healthCheckHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{
 			"status": "healthy",
 		})
 	})
-	healthResourceHanlder := useMiddleware(healthCheckHandler, CorsMiddleware, ContentTypeMiddleware, LoggingMiddleware)
+	healthResourceHanlder := useMiddleware(healthCheckHandler, CorsMiddleware, ContentTypeMiddleware, MetricMiddleware(registry), LoggingMiddleware)
 	gw.mux.Handle("/", protectResourceHandler)
 	gw.mux.Handle("/health", healthResourceHanlder)
+	gw.mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	errChan := make(chan error, 1)
 
 	go func() {
