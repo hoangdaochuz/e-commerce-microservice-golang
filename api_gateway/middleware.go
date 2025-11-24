@@ -9,6 +9,8 @@ import (
 	"time"
 
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 )
 
@@ -101,4 +103,98 @@ func MiddlewareChain(handler http.Handler, middlewares ...func(http.Handler) htt
 		handler = middlewares[i](handler)
 	}
 	return handler
+}
+
+func MetricMiddleware(registry *prometheus.Registry) func(http.Handler) http.Handler {
+	// 1. Define metrics with "path" label in addition to "method" and "code"
+	requestTotal := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_request_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"path", "method", "code"},
+	)
+
+	requestDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Tracks the latencies for HTTP requests.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"path", "method", "code"},
+	)
+
+	requestSize := prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name: "http_request_size_bytes",
+			Help: "Size of HTTP requests",
+		},
+		[]string{"path", "method", "code"},
+	)
+
+	responseSize := prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name: "http_response_size_bytes",
+			Help: "Size of HTTP responses",
+		},
+		[]string{"path", "method", "code"},
+	)
+
+	// 2. Register metrics (ignore error if already registered, or handle it)
+	// Using Register instead of MustRegister to avoid panic if this function is called multiple times (though it shouldn't be)
+	// Ideally, these should be package-level variables or registered in init(), but here we use the passed registry.
+	if err := registry.Register(requestTotal); err != nil {
+		if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			requestTotal = are.ExistingCollector.(*prometheus.CounterVec)
+		} else {
+			log.Printf("Failed to register requestTotal: %v", err)
+		}
+	}
+	if err := registry.Register(requestDuration); err != nil {
+		if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			requestDuration = are.ExistingCollector.(*prometheus.HistogramVec)
+		} else {
+			log.Printf("Failed to register requestDuration: %v", err)
+		}
+	}
+	if err := registry.Register(requestSize); err != nil {
+		if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			requestSize = are.ExistingCollector.(*prometheus.SummaryVec)
+		} else {
+			log.Printf("Failed to register requestSize: %v", err)
+		}
+	}
+	if err := registry.Register(responseSize); err != nil {
+		if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			responseSize = are.ExistingCollector.(*prometheus.SummaryVec)
+		} else {
+			log.Printf("Failed to register responseSize: %v", err)
+		}
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+
+			// 3. Curry the metrics with the path label
+			// MustCurryWith returns a new Vector with the label fixed.
+			// The remaining labels should be "method" and "code" which promhttp expects.
+			curriedReqTotal := requestTotal.MustCurryWith(prometheus.Labels{"path": path})
+			curriedReqDuration := requestDuration.MustCurryWith(prometheus.Labels{"path": path})
+			curriedReqSize := requestSize.MustCurryWith(prometheus.Labels{"path": path})
+			curriedResSize := responseSize.MustCurryWith(prometheus.Labels{"path": path})
+
+			// 4. Wrap the handler with promhttp instrumenters
+			handler := promhttp.InstrumentHandlerCounter(curriedReqTotal,
+				promhttp.InstrumentHandlerDuration(curriedReqDuration,
+					promhttp.InstrumentHandlerRequestSize(curriedReqSize,
+						promhttp.InstrumentHandlerResponseSize(curriedResSize,
+							next,
+						),
+					),
+				),
+			)
+			handler.ServeHTTP(w, r)
+		})
+	}
 }
