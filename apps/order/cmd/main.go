@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,6 +13,7 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"github.com/nats-io/nats.go"
 )
 
@@ -31,7 +31,7 @@ func main() {
 	router := custom_nats.NewRouter(chi)
 	var orderApp *order.OrderServiceApp
 	di.Resolve(func(orderImplement *order.OrderServiceApp) {
-		fmt.Println("orderImplement: ", orderImplement)
+		logging.GetSugaredLogger().Infof("orderImplement: %v", orderImplement)
 		orderApp = orderImplement
 	})
 	orderAppProxy := order_api.NewOrderServiceProxy(orderApp)
@@ -48,7 +48,7 @@ func main() {
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, syscall.SIGTERM, syscall.SIGINT)
 	<-shutdownChan
-	fmt.Println("Shutting down server peacefully")
+	logging.GetSugaredLogger().Infof("Shutting down server peacefully")
 	err = server.Stop()
 	if err != nil {
 		log.Fatal("fail to stop server")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/circuitbreaker"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/metric"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
 	redis_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/redis"
@@ -67,7 +67,7 @@ func (gw *APIGateway) writeResponse(w http.ResponseWriter, response custom_nats.
 	w.WriteHeader(response.StatusCode)
 	_, err := w.Write(response.Body)
 	if err != nil {
-		fmt.Println("fail to write response body: ", err)
+		logging.GetSugaredLogger().Errorf("fail to write response body: %v", err)
 	}
 }
 
@@ -141,10 +141,10 @@ func useMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.
 }
 
 func (gw *APIGateway) Start() error {
-	fmt.Printf("Starting API Gateway in port %s\n", gw.server.Addr)
+	logging.GetSugaredLogger().Infof("Starting API Gateway in port %s", gw.server.Addr)
 	_, err := configs.Load()
 	if err != nil {
-		log.Fatal("failed to load configuration: %w", err)
+		logging.GetSugaredLogger().Fatalf("failed to load configuration: %v", err)
 		return err
 	}
 
@@ -177,14 +177,15 @@ func (gw *APIGateway) Start() error {
 	go func() {
 		defer gw.server.Close()
 		if err := gw.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Println("API Gateway listen and serve fail")
+			logging.GetSugaredLogger().Errorf("API Gateway listen and serve fail: %v", err)
 			errChan <- err
 		}
 	}()
 
 	err = <-errChan
 	gw.Stop()
-	return fmt.Errorf("api gateway listen and serve fail: %w", err)
+	logging.GetSugaredLogger().Errorf("api gateway listen and serve fail: %v", err)
+	return err
 }
 
 func (gw *APIGateway) Stop() error {

@@ -10,6 +10,7 @@ import (
 	order_repository "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository"
 	order_service "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/services/order"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 )
 
 type OrderServiceApp struct {
@@ -37,7 +38,7 @@ func (o *OrderServiceApp) CreateOrder(ctx context.Context, req *order.CreateOrde
 
 	orderId := fmt.Sprintf("order_%s_%d", customerId, time.Now().Unix())
 
-	fmt.Printf("Order created successfully for customer: %s, order_id: %s\n", customerId, orderId)
+	logging.GetSugaredLogger().Infof("Order created successfully for customer: %s, order_id: %s", customerId, orderId)
 
 	return &order.CreateOrderResponse{
 		OrderId: orderId,

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/metric/httpmiddleware"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,7 +19,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
-		log.Printf("%s %s %v", r.Method, r.URL.Path, time.Since(start))
+		logging.GetSugaredLogger().Infof("%s %s %v", r.Method, r.URL.Path, time.Since(start))
 	})
 }
 

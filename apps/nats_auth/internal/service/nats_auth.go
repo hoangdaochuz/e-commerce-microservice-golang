@@ -1,12 +1,12 @@
 package nats_auth_service
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	jwt "github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
@@ -107,7 +107,7 @@ func (s *Server) sendUnauthorizedResponse(msg *nats.Msg, reqClaims *jwt.Authoriz
 	if err != nil {
 		return err
 	}
-	fmt.Println("Sent unauthorized response")
+	logging.GetSugaredLogger().Infof("Sent unauthorized response")
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (s *Server) sendAuthorizedResponse(msg *nats.Msg, reqClaims *jwt.Authorizat
 	if err != nil {
 		return err
 	}
-	fmt.Println("Sent authorized response")
+	logging.GetSugaredLogger().Infof("Sent authorized response")
 	return nil
 }
 

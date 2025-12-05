@@ -1,9 +1,9 @@
 package di
 
 import (
-	"fmt"
 	"sync"
 
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"go.uber.org/dig"
 )
 
@@ -28,10 +28,10 @@ func InitDIContainer() {
 		if DiContainer == nil {
 			DiContainer = newDIContainer()
 		} else {
-			fmt.Println("DIContainer has already created")
+			logging.GetSugaredLogger().Infof("DIContainer has already created")
 		}
 	} else {
-		fmt.Println("DIContainer has already created")
+		logging.GetSugaredLogger().Infof("DIContainer has already created")
 	}
 }
 

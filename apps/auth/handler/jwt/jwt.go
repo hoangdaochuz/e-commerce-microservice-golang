@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 )
 
 type JwtService struct {
@@ -17,10 +18,12 @@ func NewJwtService(rsaKeyPairFilePath string) (*JwtService, error) {
 	// Read rsa-key-pair.pem
 	rsaKeyPairBytes, err := os.ReadFile(rsaKeyPairFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("fail to read rsa key pair file")
+		logging.GetSugaredLogger().Errorf("fail to read rsa key pair file: %v", err)
+		return nil, fmt.Errorf("fail to read rsa key pair file: %w", err)
 	}
 	signKey, err := jwt.ParseRSAPrivateKeyFromPEM(rsaKeyPairBytes)
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to parse rsa private key from pem: %v", err)
 		return nil, fmt.Errorf("fail to parse rsa private key from pem: %w", err)
 	}
 	return &JwtService{
@@ -31,12 +34,14 @@ func NewJwtService(rsaKeyPairFilePath string) (*JwtService, error) {
 
 func (s *JwtService) GenerateJWT(claims *jwt.Claims) (string, error) {
 	if claims == nil {
+		logging.GetSugaredLogger().Errorf("claim is required")
 		return "", fmt.Errorf("claim is required")
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, *claims)
 	// Sign with private key
 	signedToken, err := token.SignedString(s.PrivateKey)
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to sign token with private key: %v", err)
 		return "", fmt.Errorf("fail to sign token with private key: %w", err)
 	}
 	return signedToken, nil

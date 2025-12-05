@@ -15,3 +15,7 @@ gen
 zitadel_api_key.json
 
 *.pem
+
+# Loki
+loki/
+logs

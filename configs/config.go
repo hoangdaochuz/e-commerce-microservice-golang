@@ -66,6 +66,7 @@ type GeneralConfig struct {
 	BackendEndpoint       string `mapstructure:"backend_endpoint"`
 	FrontendUserEndpoint  string `mapstructure:"frontend_user_endpoint"`
 	FrontendAdminEndpoint string `mapstructure:"frontent_admin_endpoint"`
+	Mode                  string `mapstructure:"mode"`
 }
 
 type CircuitBreakerCommon struct {
@@ -167,6 +168,7 @@ func setDefaults() {
 	viper.SetDefault("general_config.backend_endpoint", "http://localhost:8080")
 	viper.SetDefault("general_config.frontend_user_endpoint", "http://localhost:3000")
 	viper.SetDefault("general_config.frontend_admin_endpoint", "http://localhost:3001")
+	viper.SetDefault("general_config.mode", "production")
 
 	// Circuit Breaker
 	viper.SetDefault("circuit_breaker.defaults.max_requests", 3)
@@ -230,6 +232,7 @@ func Load() (*Config, error) {
 
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	_ = viper.BindEnv("general_config.mode", "GENERAL_CONFIG_MODE")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("failed to read config file: %w", err)

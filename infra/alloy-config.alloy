@@ -1,0 +1,60 @@
+logging {
+  level = "debug"
+}
+
+// loki target
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+// ================================
+
+// Source: Read log from log file which is print from console
+loki.source.file "console_logs" {
+  targets = [
+    {
+      __path__ = "/logs/api_gateway.log",
+      job = "console",
+    },
+    {
+      __path__ = "/logs/auth.log",
+      job = "console",
+    },
+    {
+      __path__ = "/logs/order.log",
+      job = "console",
+    },
+  ]
+  forward_to = [loki.process.console_pipeline.receiver]
+}
+
+loki.process "console_pipeline" {
+  stage.labels {
+    values = {
+      source = "console",
+    }
+  }
+  forward_to = [loki.write.default.receiver]
+}
+
+//===================================
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "docker_logs" {
+  targets    = discovery.docker.containers.targets
+  forward_to = [loki.process.docker_pipeline.receiver]
+  host       = "unix:///var/run/docker.sock"
+}
+
+// Pipeline: parse json log if any
+loki.process "docker_pipeline" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.drop {
+    older_than = "6h"
+  }
+}

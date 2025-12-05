@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,6 +11,7 @@ import (
 	apigateway "github.com/hoangdaochuz/ecommerce-microservice-golang/api_gateway"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"github.com/nats-io/nats.go"
 )
 
@@ -23,11 +23,13 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to load configuration: %w", err)
 	}
+	logger := logging.GetSugaredLogger()
 	natsConn, err := nats.Connect(config.NatsAuth.NATSUrl, nats.UserInfo(config.NatsAuth.NATSApps[0].Username, config.NatsAuth.NATSApps[0].Password))
 	if err != nil {
-		log.Fatal("Failed to connect to nats: ", err)
+		logger.Fatalf("Failed to connect to nats: %v", err)
 	}
-	log.Println("Connected to nats successfully")
+	// log.Println("Connected to nats successfully")
+	logger.Info("Connected to nats successfully")
 
 	mux := http.NewServeMux()
 	apigatewayServer := &http.Server{
@@ -40,23 +42,22 @@ func main() {
 		return gateway
 	})
 	err = gateway.Start()
-	fmt.Println("hello, what is this")
 	if err != nil {
 		err = gateway.Stop()
 		if err != nil {
-			log.Fatal("fail to shut down api gateway...")
+			logging.GetSugaredLogger().Fatalf("fail to shut down api gateway: %v", err)
 			return
 		}
-		log.Fatal("fail to start api gateway: ", err)
+		logging.GetSugaredLogger().Fatalf("fail to start api gateway: %v", err)
 	}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	fmt.Println("Shutting down api gateway...")
+	logging.GetSugaredLogger().Infof("Shutting down api gateway...")
 	err = gateway.Stop()
 	if err != nil {
-		log.Fatal("fail to shut down api gateway...")
+		logging.GetSugaredLogger().Fatalf("fail to shut down api gateway: %v", err)
 		return
 	}
-	fmt.Println("shut down api gateway successfully")
+	logging.GetSugaredLogger().Infof("shut down api gateway successfully")
 }

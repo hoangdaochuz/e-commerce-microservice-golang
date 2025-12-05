@@ -6,6 +6,7 @@ import (
 	"time"
 
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	redis_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/redis"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/utils"
 )
@@ -35,6 +36,7 @@ func (r *RedisSession[T]) Get(ctx context.Context, key string) (*T, error) {
 func (r *RedisSession[T]) Set(ctx context.Context, key string, value T, seconds int) error {
 	valueStr, err := utils.StructToJsonString(value)
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to set redis session: %v", err)
 		return fmt.Errorf("fail to set redis session: %w", err)
 	}
 	redisStatus := r.Redis.GetClient().SetEx(ctx, key, valueStr, time.Second*time.Duration(seconds))
