@@ -3,9 +3,9 @@ package claims
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	zitadel_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel"
 	zitadel_authentication "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel/authentication"
 	zitadel_authorization "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel/authorization"
@@ -52,35 +52,42 @@ func NewHttpSessionClaimGetter(sessionKey string, sessionHanlder zitadel_authent
 func (h *HttpSessionClaimGetter) Get() (*Claim, error) {
 	cookieValue, err := h.cookieHandler.GetCookie(h.sessionKey)
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to get cookie: %v", err)
 		return nil, fmt.Errorf("fail to get cookie: %w", err)
 	}
 	if cookieValue == "" {
+		logging.GetSugaredLogger().Errorf("cookie value is empty")
 		return nil, fmt.Errorf("cookie value is empty")
 	}
 	sessionId, err := crypto.DecryptAES(cookieValue, h.decryptionKey)
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to decrypt cookie value: %v", err)
 		return nil, fmt.Errorf("fail to decrypt cookie value: %w", err)
 	}
 
 	sessionInfo, err := h.sessionHandler.Get(h.ctx, sessionId)
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("failt to get session info: %v", err)
 		return nil, fmt.Errorf("failt to get session info: %w", err)
 	}
 	if sessionInfo == nil {
+		logging.GetSugaredLogger().Errorf("session info is empty")
 		return nil, fmt.Errorf("session info is empty")
 	}
 	accessToken := sessionInfo.AccessToken
 	if accessToken != "" {
 		zitadelClaims, err := h.authorizer.Introspect(h.ctx, accessToken)
 		if err != nil {
-			log.Default().Printf("cannot introspect token: %s", err.Error())
+			logging.GetSugaredLogger().Errorf("cannot introspect token: %v", err)
 			return sessionInfo, fmt.Errorf("session claim getter: unauthorize")
 		}
 		if zitadelClaims == nil {
+			logging.GetSugaredLogger().Errorf("session claim getter: unauthorize")
 			return sessionInfo, fmt.Errorf("session claim getter: unauthorize")
 		}
 		return sessionInfo, nil
 	}
+	logging.GetSugaredLogger().Errorf("session claim getter: unauthorize: No access token")
 	return sessionInfo, fmt.Errorf("session claim getter: unauthorize: No access token")
 }
 
@@ -164,6 +171,7 @@ func (b *BearTokenGetter) Get() (*Claim, error) {
 		return nil, err
 	}
 	if res == nil {
+		logging.GetSugaredLogger().Errorf("claim not found with this token: unauthorize")
 		return nil, fmt.Errorf("claim not found with this token: unauthorize")
 	}
 	// convert zitadel claims -> internal claims
@@ -172,6 +180,7 @@ func (b *BearTokenGetter) Get() (*Claim, error) {
 		Token: b.token,
 	})
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to convert zitadel claims to internal claims: %v", err)
 		return nil, fmt.Errorf("fail to convert zitadel claims to internal claims: %w", err)
 	}
 	return internalClaims, nil

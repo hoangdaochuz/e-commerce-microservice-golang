@@ -16,6 +16,7 @@ import (
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/httpclient"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	zitadel_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel"
 	zitadel_authentication "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel/authentication"
 	zitadel_authorization "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/zitadel/authorization"
@@ -118,6 +119,7 @@ func NewAuthService() (*AuthService, error) {
 
 	zitadelAuth, err := zitadel_authentication.NewAuth(context.TODO(), sessionHandler, authConfig, viper.GetString(COOKIE_NAME_KEY), oidcDiscovery, codeVerifierStore)
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to create auth service: %v", err)
 		return nil, fmt.Errorf("fail to create auth service: %w", err)
 	}
 
@@ -127,6 +129,7 @@ func NewAuthService() (*AuthService, error) {
 	})
 	authorizer, err := zitadel_authorization.NewZitadelAuthorizer(context.TODO(), authDomain, zitadelKeyBase64, redisCache)
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to create authorizer: %v", err)
 		return nil, fmt.Errorf("fail to create authorizer: %w", err)
 	}
 
@@ -134,6 +137,7 @@ func NewAuthService() (*AuthService, error) {
 	zitadelAuthBreakerRegistry := circuitbreaker.GetRegistry[*httpclient.HTTPResponse]()
 	zitadelHTTPBreaker, err := zitadelAuthBreakerRegistry.GetOrCreateBreaker(shared.ZITADEL_CIRCUIT_BREAKER, circuitbreaker.ToCircuitBreakerConfig(shared.ZITADEL_CIRCUIT_BREAKER, zitadelCircuitBreakerConfig))
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to get or create zitadel auth breaker: %v", err)
 		return nil, fmt.Errorf("fail to get or create zitadel auth breaker: %w", err)
 	}
 	authBreakerConfig := &zitadel_authentication.AuthBreakerConfig{
@@ -164,6 +168,7 @@ func (srv *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*aut
 		zitadel_authentication.WithLoginHint(req.Username),
 	})
 	if err != nil {
+		logging.GetSugaredLogger().Errorf("fail to get login url: %v", err)
 		return nil, fmt.Errorf("fail to get login url: %w", err)
 	}
 	return &auth.RedirectResponse{

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -13,6 +12,7 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
 	custom_nats "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/custom-nats"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"github.com/nats-io/nats.go"
 
 	// Import để trigger dependency registration
@@ -71,10 +71,10 @@ func main() {
 	shutdowSign := make(chan os.Signal, 1)
 	signal.Notify(shutdowSign, syscall.SIGINT, syscall.SIGTERM)
 	<-shutdowSign
-	fmt.Println("Shutting down authenticate service server")
+	logging.GetSugaredLogger().Infof("Shutting down authenticate service server")
 	err = server.Stop()
 	if err != nil {
-		log.Fatal("fail to shut down authenticate service server")
+		logging.GetSugaredLogger().Fatalf("fail to shut down authenticate service server: %v", err)
 	}
-	log.Fatal("Shut down authenticate service server peacefully successfully")
+	logging.GetSugaredLogger().Infof("Shut down authenticate service server peacefully successfully")
 }

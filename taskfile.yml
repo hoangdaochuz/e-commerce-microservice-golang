@@ -122,7 +122,7 @@ tasks:
       - |
         go build -o cmd/main cmd/main.go
         echo "Starting API Gateway..."
-        ./cmd/main &
+        ./cmd/main 2>&1 | tee -a logs/api_gateway.log &
         sleep 1
         API_PID=$(pgrep -f "^./cmd/main$")
         echo "api_gateway:$API_PID" >> pid.txt
@@ -134,7 +134,7 @@ tasks:
       - |
         go build -o apps/order/cmd/main apps/order/cmd/main.go
         echo "Starting Order service..."
-        ./apps/order/cmd/main &
+        ./apps/order/cmd/main 2>&1 | tee -a logs/order.log &
         sleep 1
         ORDER_PID=$(pgrep -f "^./apps/order/cmd/main$")
         echo "order:$ORDER_PID" >> pid.txt
@@ -146,7 +146,7 @@ tasks:
       - |
         go build -o apps/auth/cmd/main apps/auth/cmd/main.go
         echo "Starting authenticate service..."
-        ./apps/auth/cmd/main &
+        ./apps/auth/cmd/main 2>&1 | tee -a logs/auth.log &
         sleep 1
         AUTH_PID=$(pgrep -f "^./apps/auth/cmd/main$")
         echo "auth:$AUTH_PID" >> pid.txt

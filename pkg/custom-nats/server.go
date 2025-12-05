@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"github.com/nats-io/nats.go"
 )
 
@@ -35,7 +36,7 @@ func (s *Server) subcribeNats() (*nats.Subscription, error) {
 		json.Unmarshal(msg.Data, &natsRequest)
 		request, err := NatsRequestToHttpRequest(&natsRequest)
 		if err != nil {
-			fmt.Printf("fail to change nats request to http request: %v\n", err)
+			logging.GetSugaredLogger().Errorf("fail to change nats request to http request: %v", err)
 			return
 		}
 
@@ -46,13 +47,13 @@ func (s *Server) subcribeNats() (*nats.Subscription, error) {
 
 		responseByte, err := json.Marshal(response)
 		if err != nil {
-			fmt.Printf("fail to marshal response: %v\n", err)
+			logging.GetSugaredLogger().Errorf("fail to marshal response: %v", err)
 			return
 		}
 		if msg.Reply != "" {
 			err := msg.Respond(responseByte)
 			if err != nil {
-				fmt.Printf("fail to respond message: %v\n", err)
+				logging.GetSugaredLogger().Errorf("fail to respond message: %v", err)
 				return
 			}
 		}

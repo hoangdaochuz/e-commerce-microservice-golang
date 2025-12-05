@@ -64,7 +64,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-  
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -80,3 +80,27 @@ services:
       - sqldb_server
       - mongo_server
       - nats_auth
+  loki: # Store logs
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - ./loki:/loki
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    restart: unless-stopped
+    depends_on:
+      - loki
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - ../logs:/logs
+    ports:
+      - "12345:12345" # Alloy UI
+    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy

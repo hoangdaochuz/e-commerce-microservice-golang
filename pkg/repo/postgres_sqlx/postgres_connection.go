@@ -3,6 +3,7 @@ package postgres
 import (
 	"fmt"
 
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -16,6 +17,6 @@ func (p *PostgresConnection) Connect(dsn string) error {
 		return fmt.Errorf("failed to connect to postgres: %w", err)
 	}
 	p.DB = db
-	fmt.Println("Connect to Postgres successfully ✅")
+	logging.GetSugaredLogger().Infof("Connect to Postgres successfully ✅")
 	return nil
 }
