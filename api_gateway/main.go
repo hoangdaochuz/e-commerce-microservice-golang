@@ -16,10 +16,13 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/metric"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
 	redis_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/redis"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/tracing"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 type APIGateway struct {
@@ -71,69 +74,85 @@ func (gw *APIGateway) writeResponse(w http.ResponseWriter, response custom_nats.
 	}
 }
 
-func (gw *APIGateway) ServeHTTP() func(http.ResponseWriter, *http.Request) {
+func (gw *APIGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Here is entry point for api gateway
-	return func(w http.ResponseWriter, r *http.Request) {
+	timeoutCtx, cancel := context.WithTimeout(r.Context(), gw.timeout)
+	defer cancel()
+	ctx, span := tracing.SpanContext(timeoutCtx, r.Header, fmt.Sprintf("outbound request: %s", r.URL.Path))
+	defer span.End()
+	// r, err := http.NewRequestWithContext(ctx, r.Method, r.URL.Path, r.Body)
+	// if err != nil {
+	// 	logging.GetSugaredLogger().Panicf("fail to create a http req: %w", err)
+	// }
+	r = r.WithContext(ctx)
+	tracing.InjectTraceIntoHttpReq(ctx, r)
 
-		natsReq, err := custom_nats.HttpRequestToNatsRequest(*r)
-		if err != nil {
-			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		// Add necessary infomation to header for updating to context and use it if we need
-		natsReq.AddHeader("X-User-Id", "test@1234")
-		// continue add if we want
-
-		serviceName := natsReq.GetServiceName()
-		circuitBreakerConfigService := configs.LoadNatsCircuitBreakerConfigByServiceName(serviceName)
-		cbRegistry := circuitbreaker.GetRegistry[*nats.Msg]()
-		breaker, err := cbRegistry.GetOrCreateBreaker(serviceName, circuitbreaker.ToCircuitBreakerConfig(serviceName, circuitBreakerConfigService))
-		if err != nil {
-			gw.sendErrorResponse(w, fmt.Errorf("fail to get or create a circuit breaker: %w", err).Error(), http.StatusInternalServerError)
-			return
-		}
-
-		natsConnWithCircuitBreakerWrapper := custom_nats.NewNatsConnWithCircuitBreaker(gw.natsConn, breaker)
-
-		// natsSubject := natsReq.Subject
-		natsReqByte, err := json.Marshal(*natsReq)
-		if err != nil {
-			gw.sendErrorResponse(w, fmt.Errorf("fail to marshal nats request: %w", err).Error(), http.StatusInternalServerError)
-			return
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), gw.timeout)
-		defer cancel()
-		natsSendRequest := &custom_nats.NatsSendRequest{
-			Subject: natsReq.Subject,
-			Content: natsReqByte,
-		}
-		msgResponse, err := natsConnWithCircuitBreakerWrapper.SendRequest(ctx, natsSendRequest)
-		if err != nil {
-			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		var natsResponse custom_nats.Response
-		err = json.Unmarshal(msgResponse.Data, &natsResponse)
-		if err != nil {
-			gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if strings.Contains(r.URL.Path, "Logout") {
-			// clear cookie
-			http.SetCookie(w, &http.Cookie{
-				Name:     viper.GetString("zitadel_configs.cookie_name"),
-				Path:     "/",
-				Domain:   "",
-				MaxAge:   -1,
-				Secure:   true,
-				HttpOnly: true,
-				SameSite: http.SameSiteNoneMode,
-			})
-		}
-
-		gw.writeResponse(w, natsResponse)
+	natsReq, err := custom_nats.HttpRequestToNatsRequest(*r)
+	if err != nil {
+		gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	// Add necessary infomation to header for updating to context and use it if we need
+	natsReq.AddHeader("X-User-Id", "test@1234")
+	// continue add if we want
+
+	serviceName := natsReq.GetServiceName()
+	circuitBreakerConfigService := configs.LoadNatsCircuitBreakerConfigByServiceName(serviceName)
+	cbRegistry := circuitbreaker.GetRegistry[*nats.Msg]()
+	breaker, err := cbRegistry.GetOrCreateBreaker(serviceName, circuitbreaker.ToCircuitBreakerConfig(serviceName, circuitBreakerConfigService))
+	if err != nil {
+		gw.sendErrorResponse(w, fmt.Errorf("fail to get or create a circuit breaker: %w", err).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	natsConnWithCircuitBreakerWrapper := custom_nats.NewNatsConnWithCircuitBreaker(gw.natsConn, breaker)
+
+	// natsSubject := natsReq.Subject
+	natsReqByte, err := json.Marshal(*natsReq)
+	if err != nil {
+		gw.sendErrorResponse(w, fmt.Errorf("fail to marshal nats request: %w", err).Error(), http.StatusInternalServerError)
+		return
+	}
+	natsSendRequest := &custom_nats.NatsSendRequest{
+		Subject: natsReq.Subject,
+		Content: natsReqByte,
+	}
+	// logging.GetSugaredLogger().Infof("Sending request ")
+	msgResponse, err := natsConnWithCircuitBreakerWrapper.SendRequest(timeoutCtx, natsSendRequest)
+
+	if err != nil {
+		// set span attribute error
+		tracing.SetSpanError(span, err)
+		gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var natsResponse custom_nats.Response
+	err = json.Unmarshal(msgResponse.Data, &natsResponse)
+	if err != nil {
+		tracing.SetSpanError(span, err)
+		gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if strings.Contains(r.URL.Path, "Logout") {
+		// clear cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:     viper.GetString("zitadel_configs.cookie_name"),
+			Path:     "/",
+			Domain:   "",
+			MaxAge:   -1,
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
+	}
+	span.SetAttributes(
+		semconv.HTTPMethod(r.Method),
+		semconv.HTTPRoute(r.URL.Path),
+		semconv.HTTPScheme(r.URL.Scheme),
+		semconv.HTTPStatusCode(natsResponse.StatusCode),
+	)
+	gw.writeResponse(w, natsResponse)
 }
 
 func useMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
@@ -147,7 +166,7 @@ func (gw *APIGateway) Start() error {
 		logging.GetSugaredLogger().Fatalf("failed to load configuration: %v", err)
 		return err
 	}
-
+	otlpEndpoint := viper.GetString("general_config.otlp_endpoint")
 	var redisClient *redis.Client
 	di.Resolve(func(redisPkg *redis_pkg.Redis) {
 		redisClient = redisPkg.GetClient()
@@ -159,7 +178,23 @@ func (gw *APIGateway) Start() error {
 	registryWrapper.RegisterCollectorDefault()
 	registry := registryWrapper.GetRegistry()
 
-	rootHandler := http.HandlerFunc(gw.ServeHTTP())
+	shutdownTracing, err := tracing.InitializeTraceRegistry(&tracing.TracingConfig{
+		ServiceName: "api_gateway",
+		// Attributes:,
+		SamplingRate: 1,
+		BatchTimeout: 5 * time.Second,
+		BatchMaxSize: 512,
+		OtelEndpoint: otlpEndpoint,
+	})
+	if err != nil {
+		logging.GetSugaredLogger().Error(err)
+		return err
+	}
+	defer shutdownTracing()
+
+	rootHandler := otelhttp.NewHandler(gw, "", otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+		return r.URL.Path
+	}))
 	_ = useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), LoggingMiddleware)
 	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), MetricMiddleware(registry), AuthMiddleware, LoggingMiddleware)
 	healthCheckHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

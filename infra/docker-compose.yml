@@ -64,6 +64,9 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
 
   grafana:
     image: grafana/grafana:latest
@@ -103,4 +106,20 @@ services:
       - ../logs:/logs
     ports:
       - "12345:12345" # Alloy UI
+      - "4317:4317" # OTLP grpc receiver - apps send traces here
+      - "4318:4318" # OTLP http receiver
     command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    depends_on:
+      - prometheus
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+      - ./tempo:/var/tempo
+    ports:
+      - "3200:3200" # Tempo UI
+      # OTLP ports are internal only - apps should send traces through Alloy
+    command: ["-config.file=/etc/tempo.yaml"]
+    

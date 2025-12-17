@@ -4,25 +4,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/tracing"
 	"github.com/nats-io/nats.go"
 )
 
-type Server struct {
-	natsConn     *nats.Conn
-	router       *Router
-	natsSubject  string
-	client       Client
-	subcriptions *nats.Subscription
+type ServerConfig struct {
+	ServiceName  string
+	OtelEndpoint string
 }
 
-func NewServer(natsConn *nats.Conn, router *Router, natsSubject string, client Client) *Server {
+type Server struct {
+	natsConn        *nats.Conn
+	router          *Router
+	natsSubject     string
+	client          Client
+	subcriptions    *nats.Subscription
+	ServerConfig    *ServerConfig
+	shutdownTracing func()
+}
+
+func NewServer(natsConn *nats.Conn, router *Router, natsSubject string, client Client, serverConfig *ServerConfig) *Server {
 	return &Server{
-		natsConn:    natsConn,
-		router:      router,
-		natsSubject: natsSubject,
-		client:      client,
+		natsConn:     natsConn,
+		router:       router,
+		natsSubject:  natsSubject,
+		client:       client,
+		ServerConfig: serverConfig,
+		// shutdownTracing: shutdownTracing,
 	}
 }
 
@@ -30,6 +41,9 @@ func (s *Server) setSubcriptions(subcriptions *nats.Subscription) {
 	s.subcriptions = subcriptions
 }
 
+func (s *Server) setShutdownTracing(shutdownTracing func()) {
+	s.shutdownTracing = shutdownTracing
+}
 func (s *Server) subcribeNats() (*nats.Subscription, error) {
 	handler := func(msg *nats.Msg) {
 		var natsRequest Request
@@ -39,11 +53,13 @@ func (s *Server) subcribeNats() (*nats.Subscription, error) {
 			logging.GetSugaredLogger().Errorf("fail to change nats request to http request: %v", err)
 			return
 		}
+		// instrument the request
+		ctx := tracing.ExtractTraceFromHttpRequest(request)
 
 		response := &Response{
 			Headers: http.Header{},
 		}
-		s.router.ServeHTTP(response, request)
+		s.router.ServeHTTP(response, request.WithContext(ctx))
 
 		responseByte, err := json.Marshal(response)
 		if err != nil {
@@ -67,9 +83,24 @@ func (s *Server) subcribeNats() (*nats.Subscription, error) {
 }
 
 func (s *Server) Start() error {
+
+	shutdownTracing, err := tracing.InitializeTraceRegistry(&tracing.TracingConfig{
+		ServiceName: s.ServerConfig.ServiceName,
+		// Attributes:,
+		SamplingRate: 1,
+		BatchTimeout: 5 * time.Second,
+		BatchMaxSize: 512,
+		OtelEndpoint: s.ServerConfig.OtelEndpoint,
+	})
+	if err != nil {
+		logging.GetSugaredLogger().Error(err)
+		return err
+	}
+	s.setShutdownTracing(shutdownTracing)
+
 	s.client.Register(*s.router)
 	// subcribe subject
-	_, err := s.subcribeNats()
+	_, err = s.subcribeNats()
 	if err != nil {
 		return err
 	}
@@ -81,5 +112,7 @@ func (s *Server) Stop() error {
 	if err != nil {
 		return err
 	}
+	s.shutdownTracing()
+	logging.GetSugaredLogger().Infof("Tracing has shut down for service %s", s.ServerConfig.ServiceName)
 	return nil
 }

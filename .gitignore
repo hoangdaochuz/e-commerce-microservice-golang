@@ -13,9 +13,11 @@ gen
 
 # Credentials
 zitadel_api_key.json
+api_key.txt
 
 *.pem
 
 # Loki
 loki/
 logs
+tempo/

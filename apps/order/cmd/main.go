@@ -39,7 +39,10 @@ func main() {
 	orderRouterClient := order_api.NewOrderServiceRouter(orderAppProxy)
 	order_configs.NewOrderDatabase()
 
-	server := custom_nats.NewServer(natsConn, router, order_api.NATS_SUBJECT, orderRouterClient)
+	server := custom_nats.NewServer(natsConn, router, order_api.NATS_SUBJECT, orderRouterClient, &custom_nats.ServerConfig{
+		ServiceName:  "order",
+		OtelEndpoint: config.GeneralConfig.OTLP_Endpoint,
+	})
 	err = server.Start()
 	if err != nil {
 		log.Fatal("fail to start order server")

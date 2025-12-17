@@ -1,7 +1,7 @@
 logging {
   level = "debug"
 }
-
+// ============================ FOR COLLECT LOG ==============================
 // loki target
 loki.write "default" {
   endpoint {
@@ -56,5 +56,117 @@ loki.process "docker_pipeline" {
 
   stage.drop {
     older_than = "6h"
+  }
+}
+
+// =================== FOR COLLECT TRACE ======================
+// OTLP Receiver - receives traces from applications
+// Connects to batch processor
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+// Batch Processor - batches traces for efficient processing
+// Connects to attributes processor
+otelcol.processor.batch "default" {
+  timeout = "5s"
+  send_batch_size = 100
+
+  output {
+    traces = [otelcol.processor.attributes.default.input]
+  }
+}
+
+// Attributes Processor - adds custom attributes
+// Connects to servicegraph connector and exporter
+otelcol.processor.attributes "default" {
+  action {
+    key = "environment"
+    value = "local"
+    action = "insert"
+  }
+
+  action {
+    key = "deployment.environment"
+    value = "docker-compose"
+    action = "insert"
+  }
+
+  output {
+    traces = [
+      otelcol.connector.servicegraph.default.input,
+      otelcol.connector.spanmetrics.default.input,
+      otelcol.exporter.otlp.tempo.input,
+    ]
+  }
+}
+
+// Service Graph Connector - generates service graph metrics from traces
+otelcol.connector.servicegraph "default" {
+  dimensions = ["http.method", "http.status_code"]
+
+  output {
+    metrics = [otelcol.exporter.prometheus.metrics.input]
+  }
+}
+
+// Span Metrics Connector - generates metrics from spans
+otelcol.connector.spanmetrics "default" {
+  histogram {
+    explicit {
+      buckets = ["5ms", "10ms", "50ms", "100ms", "250ms", "500ms", "1s", "2s", "5s"]
+    }
+  }
+
+  dimension {
+    name = "service.name"
+  }
+
+  dimension {
+    name = "span.name"
+  }
+
+  dimension {
+    name = "span.kind"
+  }
+
+  dimension {
+    name = "status.code"
+  }
+
+  output {
+    metrics = [otelcol.exporter.prometheus.metrics.input]
+  }
+}
+
+// OTLP Exporter - sends traces to Tempo
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Export metrics to Prometheus (Push mode via Remote Write)
+otelcol.exporter.prometheus "metrics" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// Remote Write - pushes metrics to Prometheus
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
   }
 }

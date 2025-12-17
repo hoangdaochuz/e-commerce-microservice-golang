@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/circuitbreaker"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // HTTPResponse wraps http.Response with body content
@@ -29,11 +30,13 @@ type BreakerHTTPClient struct {
 func NewBreakerHTTPClient(config *Config, breaker *circuitbreaker.Breaker[*HTTPResponse]) *BreakerHTTPClient {
 	httpClient := &http.Client{
 		Timeout: time.Duration(config.Timeout) * time.Second,
-		Transport: &http.Transport{
+		Transport: otelhttp.NewTransport(&http.Transport{
 			MaxIdleConns:        config.MaxIdleConns,
 			MaxIdleConnsPerHost: config.MaxIdleConnsPerHost,
 			IdleConnTimeout:     time.Duration(config.IdleConnTimeout) * time.Second,
-		},
+		}, otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+		})),
 	}
 
 	return &BreakerHTTPClient{

@@ -1,0 +1,72 @@
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 1h
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+# Enable metrics generator for Service Graph in Grafana
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: docker-compose
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+  traces_storage:
+    path: /var/tempo/generator/traces
+  processor:
+    service_graphs:
+      dimensions:
+        - http.method
+        - http.status_code
+      enable_client_server_prefix: true
+      peer_attributes:
+        - db.name
+        - db.system
+        - messaging.system
+        - rpc.service
+      wait: 10s
+      max_items: 10000
+    span_metrics:
+      dimensions:
+        - http.method
+        - http.status_code
+        - http.route
+      enable_target_info: true
+      histogram_buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+    local_blocks:
+      flush_to_storage: true
+
+# Override defaults for tenants - enable all processors
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+        - span-metrics
+        - local-blocks
+      generate_native_histograms: both
