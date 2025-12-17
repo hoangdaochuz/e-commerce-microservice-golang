@@ -1,6 +1,7 @@
 package apigateway
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,8 +12,11 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/logging"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/metric/httpmiddleware"
 	ratelimiter "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/rate_limiter"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/tracing"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func LoggingMiddleware(next http.Handler) http.Handler {
@@ -114,6 +118,21 @@ func MetricMiddleware(registry *prometheus.Registry) func(http.Handler) http.Han
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Use r.URL.Path as the path label since user confirmed no dynamic IDs
 			mw.WrapHandler(r.URL.Path, next).ServeHTTP(w, r)
+		})
+	}
+}
+
+func ApiGatewayTracing(ctx context.Context, tracer trace.Tracer) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			tracing.InjectTraceIntoHttpReq(ctx, r)
+			ctx, span := tracer.Start(ctx, r.URL.Path, trace.WithAttributes(
+				semconv.HTTPMethod(r.Method),
+				semconv.HTTPRoute(r.URL.Path),
+				semconv.HTTPScheme(r.URL.Scheme),
+			))
+			defer span.End()
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

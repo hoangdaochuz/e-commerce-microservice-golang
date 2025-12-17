@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/shared"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 )
 
 type (
@@ -216,5 +218,10 @@ func (router *Router) RegisterRoute(method, path string, h Handler) {
 			}
 		}
 	}
-	router.chi.Method(method, path, http.HandlerFunc(handler))
+	router.chi.Method(method, path, otelhttp.NewHandler(
+		http.HandlerFunc(handler),
+		path,
+		otelhttp.WithTracerProvider(otel.GetTracerProvider()),
+		otelhttp.WithPropagators(otel.GetTextMapPropagator()),
+	))
 }

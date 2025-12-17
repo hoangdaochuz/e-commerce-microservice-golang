@@ -30,7 +30,7 @@ const (
 )
 
 func main() {
-	_, err := configs.Load()
+	config, err := configs.Load()
 	if err != nil {
 		log.Fatal("fail to load config")
 	}
@@ -61,7 +61,10 @@ func main() {
 	authServiceProxy := authService_api.NewAuthenticateServiceProxy(authServiceApp)
 	authServiceClient := authService_api.NewAuthenticateServiceRouter(authServiceProxy)
 
-	server := custom_nats.NewServer(natsConn, router, authService_api.NATS_SUBJECT, authServiceClient)
+	server := custom_nats.NewServer(natsConn, router, authService_api.NATS_SUBJECT, authServiceClient, &custom_nats.ServerConfig{
+		ServiceName:  "auth",
+		OtelEndpoint: config.GeneralConfig.OTLP_Endpoint,
+	})
 
 	err = server.Start()
 	if err != nil {

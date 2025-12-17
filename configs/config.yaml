@@ -1,8 +1,9 @@
 general_config:
   backend_endpoint: "http://localhost:8080"
   frontend_user_endpoint: "http://localhost:3000"
-  frontent_admin_endpoint: "http://localhost:3001"
+  frontent_admin_endpoint: "http://localhost:3030"
   mode: "production"
+  otlp_endpoint: "localhost:4317"  #alloy:4317
 nats_auth:
   auth_callout_subject: "$SYS.REQ.USER.AUTH"
   nats_url: "nats://localhost:4222"
@@ -16,10 +17,10 @@ nats_auth:
     - username: "auth"
       password: "auth"
       account: "AUTH"
-  xkey_private: "XKEY_PRIVATE"
-  xkey_public: "XAIQQJE4ESQULXOYQXCVVIJEFOO54HGKMM6JMER7IIOHC3TVPJAXN2R6"
-  issuer: "AA7IEJQVWCOXH5QEWEKE34XLJR4OOZG6WTU6TRNTR3EMHCQZ4IQMFL6G"
-  issuer_private: "ISSUER_PRIVATE"
+  xkey_private: "YOUR_XKEY_PRIVATE"
+  xkey_public: "XCNV6HEXCLP5PPN55LOV7ANZFTIBUE7UMQN4JHWPGCVEJMB4SRXTRQT6"
+  issuer: "AB7F32F3CVMQ75HAJYXR64ANIMZOEOLBSLKVTVLOU5PQFS3ZCIJAQVFL"
+  issuer_private: "YOUR_ISSUER_PRIVATE"
 service_registry:
   request_timeout: 30s
 apigateway:

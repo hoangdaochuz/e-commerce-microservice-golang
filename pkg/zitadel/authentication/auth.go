@@ -350,7 +350,7 @@ func (u *UserInfoGetterImp) UserInfo(ctx context.Context, token *Token, userInfo
 	return &claims, nil
 }
 
-func (a *Auth[T]) Callback(r *http.Request, w http.ResponseWriter, appPath string, convertToInternalClaims func(zitadelClaim zitadel_pkg.ZitadelClaim, token *Token, sessionId string) (*T, error), userInfoGetter UserInfoGetter) error {
+func (a *Auth[T]) Callback(ctx context.Context, r *http.Request, w http.ResponseWriter, appPath string, convertToInternalClaims func(zitadelClaim zitadel_pkg.ZitadelClaim, token *Token, sessionId string) (*T, error), userInfoGetter UserInfoGetter) error {
 	// app path is a entry point: example http://localhost:8080/pro/next-shop --> path is /pro/next-shop will set in cookie.
 	// So when other request with enpoint match with /pro/next-shop  will have cookie and backend can read this cookie.
 	// Because all request will start with endpoint something like that, so the cookie will be set and can be read by backend.
@@ -365,7 +365,7 @@ func (a *Auth[T]) Callback(r *http.Request, w http.ResponseWriter, appPath strin
 	if err != nil {
 		return fmt.Errorf("fail to set cookie: %w", err)
 	}
-	zitadelClaims, err := userInfoGetter.UserInfo(r.Context(), token, a.Config.UserInfoEndpoint)
+	zitadelClaims, err := userInfoGetter.UserInfo(ctx, token, a.Config.UserInfoEndpoint)
 	if err != nil {
 		return fmt.Errorf("fail to get user info from token: %w", err)
 	}

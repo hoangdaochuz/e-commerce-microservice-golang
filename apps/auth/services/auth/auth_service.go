@@ -216,7 +216,7 @@ func (srv *AuthService) Callback(ctx context.Context, req *auth.CallbackRequest)
 	r.Header = headers
 
 	w := custom_nats.NewResponseBuilderWithHeader(nil)
-	err = srv.zitadelAuthBreaker.Callback(r, w, "/", func(zitadelClaim zitadel_pkg.ZitadelClaim, token *zitadel_authentication.Token, sessionId string) (*claims.Claim, error) {
+	err = srv.zitadelAuthBreaker.Callback(ctx, r, w, "/", func(zitadelClaim zitadel_pkg.ZitadelClaim, token *zitadel_authentication.Token, sessionId string) (*claims.Claim, error) {
 		converter := claims.NewClaimConverter()
 		claims, err := converter.ConvertToInternalClaims(&zitadelClaim, claims.ClaimConverterRequest{
 			SessionId: sessionId,
