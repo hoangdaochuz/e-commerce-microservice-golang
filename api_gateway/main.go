@@ -118,12 +118,14 @@ func (gw *APIGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Content: natsReqByte,
 	}
 	// logging.GetSugaredLogger().Infof("Sending request ")
+	start := time.Now()
 	msgResponse, err := natsConnWithCircuitBreakerWrapper.SendRequest(timeoutCtx, natsSendRequest)
 
 	if err != nil {
 		// set span attribute error
 		tracing.SetSpanError(span, err)
 		gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
+		logging.GetSugaredLogger().Errorf("%s %s %v statusCode: %v traceId: %s", r.Method, r.URL.Path, time.Since(start), http.StatusInternalServerError, span.SpanContext().TraceID().String())
 		return
 	}
 
@@ -132,6 +134,7 @@ func (gw *APIGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		tracing.SetSpanError(span, err)
 		gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
+		logging.GetSugaredLogger().Errorf("%s %s %v statusCode: %v traceId: %s", r.Method, r.URL.Path, time.Since(start), http.StatusInternalServerError, span.SpanContext().TraceID().String())
 		return
 	}
 	if strings.Contains(r.URL.Path, "Logout") {
@@ -152,6 +155,7 @@ func (gw *APIGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		semconv.HTTPScheme(r.URL.Scheme),
 		semconv.HTTPStatusCode(natsResponse.StatusCode),
 	)
+	logging.GetSugaredLogger().Infof("%s %s %v statusCode: %v traceId: %s", r.Method, r.URL.Path, time.Since(start), natsResponse.StatusCode, span.SpanContext().TraceID().String())
 	gw.writeResponse(w, natsResponse)
 }
 
@@ -195,15 +199,15 @@ func (gw *APIGateway) Start() error {
 	rootHandler := otelhttp.NewHandler(gw, "", otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
 		return r.URL.Path
 	}))
-	_ = useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), LoggingMiddleware)
-	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), MetricMiddleware(registry), AuthMiddleware, LoggingMiddleware)
+	_ = useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter))
+	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), MetricMiddleware(registry), AuthMiddleware)
 	healthCheckHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{
 			"status": "healthy",
 		})
 	})
-	healthResourceHanlder := useMiddleware(healthCheckHandler, CorsMiddleware, ContentTypeMiddleware, MetricMiddleware(registry), LoggingMiddleware)
+	healthResourceHanlder := useMiddleware(healthCheckHandler, CorsMiddleware, ContentTypeMiddleware, MetricMiddleware(registry))
 	gw.mux.Handle("/", protectResourceHandler)
 	gw.mux.Handle("/health", healthResourceHanlder)
 	gw.mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
