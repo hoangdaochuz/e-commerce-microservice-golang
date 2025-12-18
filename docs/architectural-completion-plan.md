@@ -9,6 +9,22 @@ This document outlines a comprehensive architectural roadmap to complete the e-c
 **Timeline:** 16-20 weeks  
 **Approach:** Incremental, layer-by-layer implementation
 
+### Progress Overview (Updated: December 2025)
+
+| Phase | Status | Progress |
+|-------|--------|----------|
+| Phase 1: Core Infrastructure | ✅ 80% Done | Circuit Breaker, Observability complete |
+| Phase 2: Remaining Microservices | ❌ Not Started | 0/8 services |
+| Phase 3: Advanced Patterns | ❌ Not Started | SAGA, CQRS, Events |
+| Phase 4: Production Readiness | ❌ Not Started | K8s, CI/CD, Security |
+| Phase 5: Optimization | ❌ Not Started | Load testing, Scaling |
+
+**Completed Components:**
+- ✅ **Observability Stack**: OpenTelemetry + Tempo (Traces), Prometheus (Metrics), Zap + Loki (Logs), Grafana (Dashboards)
+- ✅ **Circuit Breaker**: gobreaker v2 with registry pattern
+- ✅ **HTTP Client**: With circuit breaker and auto-tracing (otelhttp)
+- ✅ **Rate Limiting**: Redis-based implementation
+
 ---
 
 ## Table of Contents
@@ -36,32 +52,49 @@ Infrastructure Layer:
 ├── PostgreSQL (for Orders)
 ├── MongoDB (planned for Users, Comments, Notifications, Settings)
 ├── Redis (Cache & Sessions)
-└── Zitadel (External OAuth)
+├── Zitadel (External OAuth)
+└── ✅ Observability Stack (NEW)
+    ├── Grafana Alloy (OTLP Collector + Log Forwarder)
+    ├── Grafana Tempo (Distributed Tracing)
+    ├── Prometheus (Metrics)
+    ├── Grafana Loki (Log Aggregation)
+    └── Grafana (Visualization)
 
 Application Layer:
 ├── API Gateway (HTTP → NATS)
 │   ├── Middleware (CORS, Logging, Rate Limiting, Auth)
-│   └── Request/Response transformation
+│   ├── Request/Response transformation
+│   ├── ✅ Distributed Tracing (otelhttp)
+│   ├── ✅ Metrics Middleware (Prometheus)
+│   └── ✅ Circuit Breaker Integration
 ├── Auth Service (Complete)
 │   ├── OAuth flow (Zitadel integration)
 │   ├── Session management (Redis)
-│   └── JWT handling
+│   ├── JWT handling
+│   └── ✅ Tracing enabled
 └── Order Service (Partial)
     ├── Database schema
     ├── Repository layer
-    └── gRPC service definition
+    ├── gRPC service definition
+    └── ✅ Tracing enabled
 
 Shared Packages:
 ├── Custom NATS (Client/Server framework)
+│   └── ✅ Trace propagation support
 ├── Dependency Injection
 ├── Repository abstraction (PostgreSQL, MongoDB)
 ├── Redis client
 ├── Rate limiter
 ├── Cache abstraction
-└── Code generators (Proto → TypeScript, Proto → .d.go)
+├── Code generators (Proto → TypeScript, Proto → .d.go)
+├── ✅ pkg/tracing/ (OpenTelemetry SDK)
+├── ✅ pkg/logging/ (Zap structured logging)
+├── ✅ pkg/metric/ (Prometheus metrics)
+├── ✅ pkg/circuitbreaker/ (gobreaker v2)
+└── ✅ pkg/httpclient/ (HTTP client with circuit breaker)
 ```
 
-### 1.2 Missing Components ❌
+### 1.2 Missing Components ❌ / Partially Done ⚠️
 
 ```
 Services (8 missing):
@@ -77,51 +110,53 @@ Services (8 missing):
 └── Payment Service
 
 Infrastructure Components:
-├── Service mesh / Circuit breakers
-├── Distributed tracing
-├── Centralized logging
-├── Metrics & monitoring (Prometheus/Grafana)
-├── API documentation (Swagger/OpenAPI)
-├── Service registry/discovery
-├── Event-driven patterns (NATS JetStream)
-└── Background job processing
+├── ✅ Circuit breakers (pkg/circuitbreaker/ - gobreaker v2)
+├── ✅ Distributed tracing (OpenTelemetry + Tempo)
+├── ✅ Centralized logging (Zap + Loki + Grafana Alloy)
+├── ✅ Metrics & monitoring (Prometheus + Grafana)
+├── ❌ API documentation (Swagger/OpenAPI)
+├── ✅ Service registry/discovery (via NATS)
+├── ⚠️ Event-driven patterns (NATS JetStream) - partial
+└── ❌ Background job processing
 
 DevOps:
-├── Kubernetes manifests
-├── Helm charts
-├── CI/CD pipelines
-├── Infrastructure as Code (Terraform)
-├── Database migrations
-└── Service health checks
+├── ❌ Kubernetes manifests
+├── ❌ Helm charts
+├── ❌ CI/CD pipelines
+├── ❌ Infrastructure as Code (Terraform)
+├── ❌ Database migrations
+└── ✅ Service health checks (/health endpoint)
 
 Security:
-├── Service-to-service authentication
-├── API key management
-├── Secrets management
-├── Rate limiting per user
-└── Request validation
+├── ❌ Service-to-service authentication (mTLS)
+├── ❌ API key management
+├── ❌ Secrets management
+├── ✅ Rate limiting (pkg/rate_limiter/)
+└── ⚠️ Request validation (partial)
 
-Observability:
-├── Distributed tracing (Jaeger/Zipkin)
-├── Metrics collection (Prometheus)
-├── Log aggregation (ELK/Loki)
-└── APM (Application Performance Monitoring)
+Observability: ✅ COMPLETED
+├── ✅ Distributed tracing (OpenTelemetry + Grafana Tempo)
+├── ✅ Metrics collection (Prometheus + HTTP Middleware)
+├── ✅ Log aggregation (Zap + Grafana Loki + Alloy)
+└── ✅ Service Graph & Span Metrics (via Alloy connectors)
 ```
 
 ### 1.3 Architecture Quality Assessment
 
 | Component | Status | Quality | Notes |
 |-----------|--------|---------|-------|
-| API Gateway | ✅ Complete | Good | Needs circuit breaker, better error handling |
-| NATS Framework | ✅ Complete | Good | Custom implementation, needs testing |
+| API Gateway | ✅ Complete | Good | Includes circuit breaker, tracing, metrics |
+| NATS Framework | ✅ Complete | Good | Custom implementation with trace propagation |
 | Dependency Injection | ✅ Complete | Good | Using uber/dig |
 | Repository Pattern | ✅ Complete | Good | Abstracted for SQL/NoSQL |
 | Authentication | ✅ Complete | Good | OAuth2 with Zitadel |
 | Authorization | ⚠️ Partial | Fair | Basic implementation, needs RBAC |
 | Service Template | ⚠️ Partial | Fair | Only 2 services as reference |
-| Testing | ❌ Missing | N/A | No comprehensive tests |
-| Monitoring | ❌ Missing | N/A | No metrics/tracing |
-| Documentation | ⚠️ Partial | Fair | Basic docs, needs API specs |
+| Testing | ⚠️ Partial | Fair | Basic unit tests (jwt, circuitbreaker) |
+| **Observability** | ✅ Complete | Good | Full stack: Tracing, Metrics, Logging |
+| **Circuit Breaker** | ✅ Complete | Good | gobreaker v2, registry pattern |
+| **HTTP Client** | ✅ Complete | Good | With circuit breaker + otelhttp |
+| Documentation | ⚠️ Partial | Fair | Added observability docs |
 
 ---
 
@@ -209,17 +244,24 @@ Observability:
 │  └──────────┘ └──────────┘  └────────┘  └──────────┘  └──────────┘  │
 └───────────────────────────────────────────────────────────────────────┘
 ┌───────────────────────────────────────────────────────────────────────┐
-│                    OBSERVABILITY LAYER                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │
-│  │  Prometheus  │  │    Jaeger    │  │     Loki     │               │
-│  │  (Metrics)   │  │   (Traces)   │  │    (Logs)    │               │
+│                    OBSERVABILITY LAYER ✅ IMPLEMENTED                 │
+│                                                                       │
+│                    ┌──────────────────┐                              │
+│                    │   Grafana Alloy  │  OTLP Collector              │
+│                    │  (4317/4318)     │  Log Forwarder               │
+│                    └────────┬─────────┘                              │
+│                             │                                         │
+│  ┌──────────────┐  ┌───────▼──────┐  ┌──────────────┐               │
+│  │  Prometheus  │  │    Tempo     │  │     Loki     │               │
+│  │  (Metrics)   │◄─│   (Traces)   │  │    (Logs)    │               │
+│  │   :9090      │  │    :3200     │  │    :3100     │               │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘               │
 │         │                  │                  │                       │
 │         └──────────────────┴──────────────────┘                       │
 │                            │                                          │
 │                    ┌───────▼────────┐                                │
 │                    │    Grafana     │                                │
-│                    │  (Dashboards)  │                                │
+│                    │   :3001        │                                │
 │                    └────────────────┘                                │
 └───────────────────────────────────────────────────────────────────────┘
 ```
@@ -292,12 +334,13 @@ apps/{service-name}/
 ### 3.1 Phased Approach
 
 ```
-Phase 1: Core Infrastructure (4 weeks)
-├── Circuit breaker pattern
-├── Distributed tracing
-├── Metrics & monitoring
-├── Service template generator
-└── Database migration system
+Phase 1: Core Infrastructure (4 weeks) - ✅ 80% COMPLETED
+├── ✅ Circuit breaker pattern (pkg/circuitbreaker/)
+├── ✅ Distributed tracing (OpenTelemetry + Tempo)
+├── ✅ Metrics & monitoring (Prometheus + HTTP Middleware)
+├── ✅ Structured logging (Zap + Loki)
+├── ❌ Service template generator
+└── ❌ Database migration system
 
 Phase 2: Remaining Microservices (6 weeks)
 ├── Product Service (Week 5-6)
@@ -333,36 +376,39 @@ Phase 5: Optimization & Scaling (2 weeks)
 
 ### 3.2 Priority Matrix
 
-| Component | Priority | Complexity | Dependencies | Timeline |
-|-----------|----------|------------|--------------|----------|
-| Circuit Breaker | P0 | Medium | None | Week 1 |
-| Tracing | P0 | Low | None | Week 1-2 |
-| Metrics | P0 | Low | Tracing | Week 2 |
-| Service Template | P0 | Medium | None | Week 3 |
-| Product Service | P0 | High | Template | Week 5-6 |
-| User Service | P0 | High | Template | Week 6-7 |
-| Cart Service | P0 | Medium | Product, User | Week 8 |
-| Payment Service | P0 | High | Order | Week 8-9 |
-| Shop Service | P1 | Medium | Product | Week 7 |
-| Event System | P1 | High | All services | Week 11-12 |
-| SAGA Pattern | P1 | High | Event System | Week 13 |
-| Kubernetes | P0 | High | All services | Week 15-16 |
-| CI/CD | P0 | Medium | None | Week 17 |
+| Component | Priority | Complexity | Dependencies | Timeline | Status |
+|-----------|----------|------------|--------------|----------|--------|
+| Circuit Breaker | P0 | Medium | None | Week 1 | ✅ Done |
+| Tracing | P0 | Low | None | Week 1-2 | ✅ Done |
+| Metrics | P0 | Low | Tracing | Week 2 | ✅ Done |
+| Logging (Loki) | P0 | Low | None | Week 2 | ✅ Done |
+| Service Template | P0 | Medium | None | Week 3 | ❌ Pending |
+| Product Service | P0 | High | Template | Week 5-6 | ❌ Pending |
+| User Service | P0 | High | Template | Week 6-7 | ❌ Pending |
+| Cart Service | P0 | Medium | Product, User | Week 8 | ❌ Pending |
+| Payment Service | P0 | High | Order | Week 8-9 | ❌ Pending |
+| Shop Service | P1 | Medium | Product | Week 7 | ❌ Pending |
+| Event System | P1 | High | All services | Week 11-12 | ❌ Pending |
+| SAGA Pattern | P1 | High | Event System | Week 13 | ❌ Pending |
+| Kubernetes | P0 | High | All services | Week 15-16 | ❌ Pending |
+| CI/CD | P0 | Medium | None | Week 17 | ❌ Pending |
 
 ---
 
-## Phase 1: Core Infrastructure (Weeks 1-4)
+## Phase 1: Core Infrastructure (Weeks 1-4) - ✅ MOSTLY COMPLETED
 
-### Week 1: Resilience Patterns
+### Week 1: Resilience Patterns ✅ COMPLETED
 
-#### 1.1 Circuit Breaker Implementation
+#### 1.1 Circuit Breaker Implementation ✅
 *See circuit-breaker-implementation-plan.md for details*
 
-**Deliverables:**
-- `pkg/circuitbreaker/` package
-- NATS circuit breaker wrapper
-- Configuration management
-- Unit tests
+**Deliverables:** ✅ All completed
+- ✅ `pkg/circuitbreaker/` package (using sony/gobreaker v2)
+- ✅ NATS circuit breaker wrapper (`pkg/custom-nats/`)
+- ✅ HTTP Client with circuit breaker (`pkg/httpclient/breaker_client.go`)
+- ✅ Configuration management (`pkg/circuitbreaker/config.go`)
+- ✅ Registry pattern (`pkg/circuitbreaker/registry.go`)
+- ⚠️ Unit tests (basic tests exist)
 
 #### 1.2 Retry Mechanism
 
@@ -407,163 +453,147 @@ func (r *Retryer) ExecuteWithRetry(
 - Database operations
 - External HTTP calls
 
-### Week 2: Observability Foundation
+### Week 2: Observability Foundation ✅ COMPLETED
 
-#### 2.1 Distributed Tracing (OpenTelemetry + Jaeger)
+#### 2.1 Distributed Tracing (OpenTelemetry + Tempo) ✅ IMPLEMENTED
+
+**Actual Implementation (`pkg/tracing/main.go`):**
 
 ```go
-// pkg/tracing/tracing.go
+// pkg/tracing/main.go - ACTUAL CODE
 
 package tracing
 
-import (
-    "go.opentelemetry.io/otel"
-    "go.opentelemetry.io/otel/exporters/jaeger"
-    "go.opentelemetry.io/otel/sdk/resource"
-    "go.opentelemetry.io/otel/sdk/trace"
-)
-
-type Config struct {
-    ServiceName     string
-    JaegerEndpoint  string
-    SamplingRate    float64
-    Enabled         bool
+type TracingConfig struct {
+    ServiceName  string
+    Attributes   map[string]string
+    SamplingRate float64           // 0-1 ratio
+    BatchTimeout time.Duration
+    BatchMaxSize int
+    OtelEndpoint string            // OTLP endpoint (Alloy: localhost:4317)
 }
 
-func InitTracer(config Config) (*trace.TracerProvider, error) {
-    // Initialize Jaeger exporter
-    // Set up trace provider
-    // Configure sampling
-}
-
-// TraceMiddleware adds tracing to NATS handlers
-func TraceMiddleware(serviceName string) func(next Handler) Handler
-
-// TraceHTTPMiddleware adds tracing to HTTP handlers
-func TraceHTTPMiddleware(next http.Handler) http.Handler
+func InitializeTraceRegistry(cfg *TracingConfig) (func(), error)
+func InjectTraceIntoHttpReq(ctx context.Context, req *http.Request)
+func ExtractTraceFromHttpRequest(req *http.Request) context.Context
+func SpanContext(ctx context.Context, header http.Header, spanName string) (context.Context, trace.Span)
+func SetSpanError(span trace.Span, err error)
 ```
 
-**Package Structure:**
+**Package Structure:** ✅ Implemented
 ```
 pkg/tracing/
-├── tracing.go           # Core tracer initialization
-├── middleware.go        # HTTP/NATS middleware
-├── context.go           # Context helpers
-├── span.go              # Span utilities
-└── config.go            # Configuration
+└── main.go              # Full implementation with OTLP gRPC exporter
 ```
 
-**Integration:**
-- API Gateway (trace all incoming requests)
-- NATS custom framework (trace message flow)
-- Database operations (trace queries)
-- HTTP client (trace external calls)
+**Integration Points:** ✅ All integrated
+- ✅ API Gateway (otelhttp + custom middleware)
+- ✅ NATS custom framework (trace propagation via headers)
+- ✅ HTTP client (otelhttp.NewTransport)
+- ✅ All services (auth, order) have tracing enabled
 
-#### 2.2 Metrics Collection (Prometheus)
+**Infrastructure:** ✅ Configured
+- ✅ Grafana Alloy as OTLP Collector (`infra/alloy-config.alloy`)
+- ✅ Grafana Tempo for trace storage (`infra/tempo.yaml`)
+- ✅ Service Graph & Span Metrics generation
+
+#### 2.2 Metrics Collection (Prometheus) ✅ IMPLEMENTED
+
+**Actual Implementation:**
 
 ```go
-// pkg/metrics/metrics.go
+// pkg/metric/main.go
+type MetricWrapper struct {
+    registry *prometheus.Registry
+}
 
-package metrics
+func NewMetricWrapper() *MetricWrapper
+func (mw *MetricWrapper) RegisterCollectorDefault()  // Go + Process collectors
+func (mw *MetricWrapper) GetRegistry() *prometheus.Registry
 
-import (
-    "github.com/prometheus/client_golang/prometheus"
-    "github.com/prometheus/client_golang/prometheus/promauto"
-)
+// pkg/metric/httpmiddleware/http_middleware.go
+type Middleware struct {
+    reqTotal    *prometheus.CounterVec    // http_request_total
+    reqDuration *prometheus.HistogramVec  // http_request_duration_seconds
+    reqSize     *prometheus.SummaryVec    // http_request_size_bytes
+    resSize     *prometheus.SummaryVec    // http_response_size_bytes
+}
 
-var (
-    // HTTP metrics
-    HTTPRequestsTotal = promauto.NewCounterVec(
-        prometheus.CounterOpts{
-            Name: "http_requests_total",
-            Help: "Total HTTP requests",
-        },
-        []string{"service", "method", "path", "status"},
-    )
-    
-    HTTPRequestDuration = promauto.NewHistogramVec(
-        prometheus.HistogramOpts{
-            Name: "http_request_duration_seconds",
-            Help: "HTTP request duration",
-            Buckets: prometheus.DefBuckets,
-        },
-        []string{"service", "method", "path"},
-    )
-    
-    // NATS metrics
-    NATSMessagesPublished = promauto.NewCounterVec(
-        prometheus.CounterOpts{
-            Name: "nats_messages_published_total",
-            Help: "Total NATS messages published",
-        },
-        []string{"service", "subject"},
-    )
-    
-    // Database metrics
-    DBQueryDuration = promauto.NewHistogramVec(
-        prometheus.HistogramOpts{
-            Name: "db_query_duration_seconds",
-            Help: "Database query duration",
-        },
-        []string{"service", "operation", "table"},
-    )
-)
-
-// MetricsMiddleware for HTTP
-func MetricsMiddleware(serviceName string) func(http.Handler) http.Handler
-
-// NATSMetricsMiddleware for NATS
-func NATSMetricsMiddleware(serviceName string) func(Handler) Handler
+func NewMiddleware(buckets []float64, registry *prometheus.Registry) *Middleware
+func (m *Middleware) WrapHandler(path string, next http.Handler) http.HandlerFunc
 ```
 
-**Metrics to Track:**
-- HTTP request rate, latency, errors
-- NATS message throughput
-- Database query performance
-- Cache hit/miss rates
-- Circuit breaker states
-- Resource usage (CPU, memory, connections)
+**Metrics Exposed:** ✅ 
+| Metric | Type | Labels |
+|--------|------|--------|
+| `http_request_total` | Counter | path, method, code |
+| `http_request_duration_seconds` | Histogram | path, method, code |
+| `http_request_size_bytes` | Summary | path, method, code |
+| `http_response_size_bytes` | Summary | path, method, code |
 
-#### 2.3 Structured Logging (Zap)
+**Additional Metrics via Alloy:** ✅
+- Service Graph metrics (from traces)
+- Span metrics with histogram buckets
+- Remote write to Prometheus
+
+**Endpoint:** `/metrics` on API Gateway (port 8080)
+
+**Infrastructure:** ✅
+- ✅ Prometheus (`infra/prometheus.yml`) - scrape config
+- ✅ Alloy SpanMetrics connector
+- ✅ Remote write enabled
+
+#### 2.3 Structured Logging (Zap + Loki) ✅ IMPLEMENTED
+
+**Actual Implementation (`pkg/logging/main.go`):**
 
 ```go
-// pkg/logging/logger.go
-
 package logging
 
-import (
-    "go.uber.org/zap"
-    "go.uber.org/zap/zapcore"
-)
+var logger *zap.Logger
 
-type Config struct {
-    Level       string   // debug, info, warn, error
-    Encoding    string   // json, console
-    OutputPaths []string
-    ServiceName string
-    Environment string
+func initLogger() {
+    mode := viper.GetString("general_config.mode")
+    
+    // Development: colored, human-readable
+    developmentConfig := zap.NewDevelopmentConfig()
+    developmentConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+    developmentConfig.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+    
+    // Production: JSON format, structured
+    productionConfig := zap.NewProductionConfig()
+    productionConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+    // Keys: ts, level, msg, caller, stacktrace
 }
 
-type Logger struct {
-    *zap.SugaredLogger
-    config Config
-}
-
-func NewLogger(config Config) (*Logger, error) {
-    // Create zap logger with config
-}
-
-// WithContext adds context fields to logger
-func (l *Logger) WithContext(ctx context.Context) *Logger
-
-// Middleware for HTTP
-func HTTPLoggingMiddleware(logger *Logger) func(http.Handler) http.Handler
-
-// Middleware for NATS
-func NATSLoggingMiddleware(logger *Logger) func(Handler) Handler
+func GetSugaredLogger() *zap.SugaredLogger
 ```
 
-### Week 3: Service Template & Code Generation
+**Log Aggregation Infrastructure:** ✅
+- ✅ Grafana Loki (`infra/loki-config.yaml`)
+- ✅ Grafana Alloy as log forwarder (`infra/alloy-config.alloy`)
+
+**Log Sources Configured:**
+```
+loki.source.file "console_logs":
+├── /logs/api_gateway.log
+├── /logs/auth.log
+└── /logs/order.log
+
+loki.source.docker "docker_logs":
+└── All Docker containers via unix socket
+```
+
+**Log-Trace Correlation:** ✅
+Logs include traceId for correlation:
+```go
+logging.GetSugaredLogger().Infof("%s %s %v statusCode: %v traceId: %s", 
+    r.Method, r.URL.Path, duration, statusCode, span.SpanContext().TraceID().String())
+```
+
+> 📚 **Detailed Documentation:** See `/docs/observability/OBSERVABILITY.md` for comprehensive observability setup guide.
+
+### Week 3: Service Template & Code Generation ❌ PENDING
 
 #### 3.1 Service Generator CLI
 
@@ -647,7 +677,7 @@ apps/{service}/db/migrations/
 └── 002_add_indexes.down.sql
 ```
 
-### Week 4: Testing Infrastructure
+### Week 4: Testing Infrastructure ❌ PENDING
 
 #### 4.1 Testing Framework Setup
 
@@ -1317,10 +1347,12 @@ infra/k8s/
 │   │   └── configmap.yaml
 │   ├── mongodb/
 │   └── redis/
-├── monitoring/
+├── monitoring/ ✅ (in infra/docker-compose.yml)
 │   ├── prometheus/
 │   ├── grafana/
-│   └── jaeger/
+│   ├── tempo/      # Replaced Jaeger
+│   ├── loki/
+│   └── alloy/
 └── nats/
     ├── statefulset.yaml
     └── service.yaml
@@ -1994,16 +2026,17 @@ DR Strategy:
 - [ ] Disaster recovery tested
 
 **Production Ready Checklist:**
-- [ ] All 11 microservices implemented
-- [ ] Circuit breakers in place
-- [ ] Distributed tracing working
-- [ ] Metrics collection active
-- [ ] Logging centralized
+- [ ] All 11 microservices implemented (3/11 done)
+- [x] Circuit breakers in place ✅
+- [x] Distributed tracing working ✅ (OpenTelemetry + Tempo)
+- [x] Metrics collection active ✅ (Prometheus + Alloy)
+- [x] Logging centralized ✅ (Zap + Loki + Alloy)
 - [ ] Kubernetes deployment successful
 - [ ] CI/CD pipeline operational
 - [ ] Security audit passed
 - [ ] Load testing completed
-- [ ] Documentation complete
+- [x] Observability documentation complete ✅
+- [ ] API documentation complete
 - [ ] Runbooks created
 - [ ] Team training done
 
@@ -2022,12 +2055,20 @@ Databases:
   - Redis 7+ (Cache, Sessions, Cart)
 API: gRPC (internal), REST (external)
 Service Discovery: NATS
-Orchestration: Kubernetes
-CI/CD: GitHub Actions
-Monitoring: Prometheus + Grafana
-Tracing: Jaeger
-Logging: Loki
+Orchestration: Kubernetes (planned)
+CI/CD: GitHub Actions (planned)
 Auth: Zitadel OAuth2
+
+Observability Stack: ✅ IMPLEMENTED
+  - Tracing: OpenTelemetry SDK → Grafana Alloy → Grafana Tempo
+  - Metrics: Prometheus (scrape) + Alloy (remote write)
+  - Logging: Zap → File/Console → Grafana Alloy → Grafana Loki
+  - Visualization: Grafana (:3001)
+  - OTLP Endpoint: Grafana Alloy (:4317 gRPC, :4318 HTTP)
+
+Resilience Patterns: ✅ IMPLEMENTED
+  - Circuit Breaker: sony/gobreaker v2
+  - Rate Limiting: Redis-based sliding window
 ```
 
 ### B. Team Structure
@@ -2094,8 +2135,23 @@ This architectural plan provides a comprehensive roadmap to complete the e-comme
 
 ---
 
-**Document Version:** 1.0  
-**Date:** November 12, 2025  
+**Document Version:** 1.1  
+**Last Updated:** December 17, 2025  
 **Author:** AI Assistant  
-**Status:** Draft - Pending Review
+**Status:** Updated - Observability & Resilience Patterns Completed
+
+---
+
+## Changelog
+
+### v1.1 (December 17, 2025)
+- ✅ Updated status of Phase 1 infrastructure components
+- ✅ Marked Observability stack as COMPLETED (Tracing, Metrics, Logging)
+- ✅ Marked Circuit Breaker pattern as COMPLETED
+- ✅ Updated architecture diagrams to reflect actual implementation
+- ✅ Added reference to `/docs/observability/OBSERVABILITY.md` for detailed docs
+- ✅ Updated Technology Stack with actual tools used
+
+### v1.0 (November 12, 2025)
+- Initial architectural plan
 
