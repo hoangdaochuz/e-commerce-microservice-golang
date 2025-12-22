@@ -11,6 +11,9 @@ apps/*/cmd/main
 # Generated code
 gen
 
+# Generated mocks
+mocks/
+
 # Credentials
 zitadel_api_key.json
 api_key.txt

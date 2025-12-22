@@ -10,9 +10,18 @@ import (
 	postgres "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres_sqlx"
 )
 
+// OrderRepositoryInterface defines the contract for order repository operations
+type OrderRepositoryInterface interface {
+	FindOrderById(ctx context.Context, id uuid.UUID) (*Order, error)
+	CreateOrderWithTransaction(ctx context.Context, data Order, other ...interface{}) (interface{}, error)
+}
+
 type OrderRepository struct {
 	repo repo_pkg.Repo[*Order]
 }
+
+// Ensure OrderRepository implements OrderRepositoryInterface
+var _ OrderRepositoryInterface = (*OrderRepository)(nil)
 
 var OrderRepositoryMod = di.Make[*OrderRepository](NewOrderRepository)
 
