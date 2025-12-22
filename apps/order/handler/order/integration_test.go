@@ -11,6 +11,7 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/api/order"
 	order_repository "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository"
 	order_service "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/services/order"
+	mocks "github.com/hoangdaochuz/ecommerce-microservice-golang/mocks/order_repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -21,26 +22,8 @@ import (
 
 const bufSize = 1024 * 1024
 
-// MockOrderRepoForIntegration is a mock for integration tests
-type MockOrderRepoForIntegration struct {
-	mock.Mock
-}
-
-func (m *MockOrderRepoForIntegration) FindOrderById(ctx context.Context, id uuid.UUID) (*order_repository.Order, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*order_repository.Order), args.Error(1)
-}
-
-func (m *MockOrderRepoForIntegration) CreateOrderWithTransaction(ctx context.Context, data order_repository.Order, other ...interface{}) (interface{}, error) {
-	args := m.Called(ctx, data, other)
-	return args.Get(0), args.Error(1)
-}
-
 // setupOrderGRPCServer sets up a gRPC server with bufconn for testing
-func setupOrderGRPCServer(t *testing.T, mockRepo *MockOrderRepoForIntegration) (*grpc.Server, *bufconn.Listener) {
+func setupOrderGRPCServer(t *testing.T, mockRepo order_repository.OrderRepositoryInterface) (*grpc.Server, *bufconn.Listener) {
 	lis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()
 
@@ -75,7 +58,8 @@ func dialBufconn(ctx context.Context, lis *bufconn.Listener) (*grpc.ClientConn, 
 }
 
 func TestOrderService_Integration_CreateOrder(t *testing.T) {
-	mockRepo := new(MockOrderRepoForIntegration)
+	// Use generated mock
+	mockRepo := mocks.NewMockOrderRepositoryInterface(t)
 	_, lis := setupOrderGRPCServer(t, mockRepo)
 
 	ctx := context.Background()
@@ -107,7 +91,8 @@ func TestOrderService_Integration_CreateOrder(t *testing.T) {
 }
 
 func TestOrderService_Integration_GetOrderById(t *testing.T) {
-	mockRepo := new(MockOrderRepoForIntegration)
+	// Use generated mock
+	mockRepo := mocks.NewMockOrderRepositoryInterface(t)
 	_, lis := setupOrderGRPCServer(t, mockRepo)
 
 	ctx := context.Background()
@@ -124,7 +109,10 @@ func TestOrderService_Integration_GetOrderById(t *testing.T) {
 			Name: "Integration Test Order",
 		}
 
-		mockRepo.On("FindOrderById", mock.Anything, orderID).Return(expectedOrder, nil).Once()
+		mockRepo.EXPECT().
+			FindOrderById(mock.Anything, orderID).
+			Return(expectedOrder, nil).
+			Once()
 
 		resp, err := client.GetOrderById(ctx, &order.GetOrderByIdRequest{
 			Id: orderID.String(),
@@ -134,13 +122,15 @@ func TestOrderService_Integration_GetOrderById(t *testing.T) {
 		require.NotNil(t, resp)
 		assert.Equal(t, orderID.String(), resp.Id)
 		assert.Equal(t, "Integration Test Order", resp.Name)
-		mockRepo.AssertExpectations(t)
 	})
 
 	t.Run("returns nil for non-existent order via gRPC", func(t *testing.T) {
 		orderID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440002")
 
-		mockRepo.On("FindOrderById", mock.Anything, orderID).Return(nil, nil).Once()
+		mockRepo.EXPECT().
+			FindOrderById(mock.Anything, orderID).
+			Return(nil, nil).
+			Once()
 
 		resp, err := client.GetOrderById(ctx, &order.GetOrderByIdRequest{
 			Id: orderID.String(),
@@ -150,12 +140,12 @@ func TestOrderService_Integration_GetOrderById(t *testing.T) {
 		// gRPC will return an empty response
 		require.NoError(t, err)
 		assert.Nil(t, resp)
-		mockRepo.AssertExpectations(t)
 	})
 }
 
 func TestOrderService_Integration_ConcurrentRequests(t *testing.T) {
-	mockRepo := new(MockOrderRepoForIntegration)
+	// Use generated mock
+	mockRepo := mocks.NewMockOrderRepositoryInterface(t)
 	_, lis := setupOrderGRPCServer(t, mockRepo)
 
 	ctx := context.Background()
@@ -200,4 +190,3 @@ func TestOrderService_Integration_ConcurrentRequests(t *testing.T) {
 		assert.Equal(t, 0, errorCount)
 	})
 }
-

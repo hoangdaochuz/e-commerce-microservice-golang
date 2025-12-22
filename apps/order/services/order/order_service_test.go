@@ -8,33 +8,16 @@ import (
 
 	"github.com/google/uuid"
 	order_repository "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository"
+	mocks "github.com/hoangdaochuz/ecommerce-microservice-golang/mocks/order_repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-// MockOrderRepository is a mock implementation of OrderRepositoryInterface
-type MockOrderRepository struct {
-	mock.Mock
-}
-
-func (m *MockOrderRepository) FindOrderById(ctx context.Context, id uuid.UUID) (*order_repository.Order, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*order_repository.Order), args.Error(1)
-}
-
-func (m *MockOrderRepository) CreateOrderWithTransaction(ctx context.Context, data order_repository.Order, other ...interface{}) (interface{}, error) {
-	args := m.Called(ctx, data, other)
-	return args.Get(0), args.Error(1)
-}
-
 func TestOrderService_GetOrderById(t *testing.T) {
 	t.Run("returns order when found", func(t *testing.T) {
-		mockRepo := new(MockOrderRepository)
-		service := NewOrderServiceWithRepo(mockRepo)
+		// Use generated mock - auto cleanup and assert expectations
+		mockRepo := mocks.NewMockOrderRepositoryInterface(t)
 
 		orderID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440001")
 		expectedOrder := &order_repository.Order{
@@ -42,7 +25,12 @@ func TestOrderService_GetOrderById(t *testing.T) {
 			Name: "Test Order",
 		}
 
-		mockRepo.On("FindOrderById", mock.Anything, orderID).Return(expectedOrder, nil)
+		// Use EXPECT() pattern from generated mock
+		mockRepo.EXPECT().
+			FindOrderById(mock.Anything, orderID).
+			Return(expectedOrder, nil)
+
+		service := NewOrderServiceWithRepo(mockRepo)
 
 		ctx := context.Background()
 		req := &GetOrderByIdRequest{Id: orderID}
@@ -53,16 +41,19 @@ func TestOrderService_GetOrderById(t *testing.T) {
 		require.NotNil(t, result)
 		assert.Equal(t, orderID, result.ID)
 		assert.Equal(t, "Test Order", result.Name)
-		mockRepo.AssertExpectations(t)
+		// AssertExpectations is called automatically by t.Cleanup()
 	})
 
 	t.Run("returns nil when order not found (sql.ErrNoRows)", func(t *testing.T) {
-		mockRepo := new(MockOrderRepository)
-		service := NewOrderServiceWithRepo(mockRepo)
+		mockRepo := mocks.NewMockOrderRepositoryInterface(t)
 
 		orderID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440002")
 
-		mockRepo.On("FindOrderById", mock.Anything, orderID).Return(nil, sql.ErrNoRows)
+		mockRepo.EXPECT().
+			FindOrderById(mock.Anything, orderID).
+			Return(nil, sql.ErrNoRows)
+
+		service := NewOrderServiceWithRepo(mockRepo)
 
 		ctx := context.Background()
 		req := &GetOrderByIdRequest{Id: orderID}
@@ -71,17 +62,19 @@ func TestOrderService_GetOrderById(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Nil(t, result)
-		mockRepo.AssertExpectations(t)
 	})
 
 	t.Run("returns error when repository fails", func(t *testing.T) {
-		mockRepo := new(MockOrderRepository)
-		service := NewOrderServiceWithRepo(mockRepo)
+		mockRepo := mocks.NewMockOrderRepositoryInterface(t)
 
 		orderID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440003")
 		expectedErr := errors.New("database connection failed")
 
-		mockRepo.On("FindOrderById", mock.Anything, orderID).Return(nil, expectedErr)
+		mockRepo.EXPECT().
+			FindOrderById(mock.Anything, orderID).
+			Return(nil, expectedErr)
+
+		service := NewOrderServiceWithRepo(mockRepo)
 
 		ctx := context.Background()
 		req := &GetOrderByIdRequest{Id: orderID}
@@ -91,13 +84,9 @@ func TestOrderService_GetOrderById(t *testing.T) {
 		require.Error(t, err)
 		assert.Nil(t, result)
 		assert.Equal(t, expectedErr, err)
-		mockRepo.AssertExpectations(t)
 	})
 
 	t.Run("handles different order IDs correctly", func(t *testing.T) {
-		mockRepo := new(MockOrderRepository)
-		service := NewOrderServiceWithRepo(mockRepo)
-
 		testCases := []struct {
 			name      string
 			orderID   uuid.UUID
@@ -110,11 +99,18 @@ func TestOrderService_GetOrderById(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				mockRepo := mocks.NewMockOrderRepositoryInterface(t)
+
 				expectedOrder := &order_repository.Order{
 					ID:   tc.orderID,
 					Name: tc.orderName,
 				}
-				mockRepo.On("FindOrderById", mock.Anything, tc.orderID).Return(expectedOrder, nil).Once()
+
+				mockRepo.EXPECT().
+					FindOrderById(mock.Anything, tc.orderID).
+					Return(expectedOrder, nil)
+
+				service := NewOrderServiceWithRepo(mockRepo)
 
 				ctx := context.Background()
 				req := &GetOrderByIdRequest{Id: tc.orderID}
@@ -127,13 +123,10 @@ func TestOrderService_GetOrderById(t *testing.T) {
 				assert.Equal(t, tc.orderName, result.Name)
 			})
 		}
-
-		mockRepo.AssertExpectations(t)
 	})
 
 	t.Run("passes context correctly to repository", func(t *testing.T) {
-		mockRepo := new(MockOrderRepository)
-		service := NewOrderServiceWithRepo(mockRepo)
+		mockRepo := mocks.NewMockOrderRepositoryInterface(t)
 
 		orderID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440004")
 		expectedOrder := &order_repository.Order{
@@ -145,21 +138,23 @@ func TestOrderService_GetOrderById(t *testing.T) {
 		type ctxKey string
 		ctx := context.WithValue(context.Background(), ctxKey("test"), "value")
 
-		mockRepo.On("FindOrderById", ctx, orderID).Return(expectedOrder, nil)
+		mockRepo.EXPECT().
+			FindOrderById(ctx, orderID).
+			Return(expectedOrder, nil)
 
+		service := NewOrderServiceWithRepo(mockRepo)
 		req := &GetOrderByIdRequest{Id: orderID}
 
 		result, err := service.GetOrderById(ctx, req)
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		mockRepo.AssertExpectations(t)
 	})
 }
 
 func TestNewOrderServiceWithRepo(t *testing.T) {
 	t.Run("creates service with provided repository", func(t *testing.T) {
-		mockRepo := new(MockOrderRepository)
+		mockRepo := mocks.NewMockOrderRepositoryInterface(t)
 		service := NewOrderServiceWithRepo(mockRepo)
 
 		require.NotNil(t, service)

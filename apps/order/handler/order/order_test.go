@@ -10,30 +10,11 @@ import (
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/api/order"
 	order_repository "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository"
 	order_service "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/services/order"
+	mocks "github.com/hoangdaochuz/ecommerce-microservice-golang/mocks/order_service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-// MockOrderService is a mock implementation of OrderServiceInterface
-type MockOrderService struct {
-	mock.Mock
-}
-
-func (m *MockOrderService) GetOrderById(ctx context.Context, req *order_service.GetOrderByIdRequest) (*order_repository.Order, error) {
-	args := m.Called(ctx, req)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*order_repository.Order), args.Error(1)
-}
-
-// newTestOrderServiceApp creates an OrderServiceApp with a mock service for testing
-func newTestOrderServiceApp(service *order_service.OrderService) *OrderServiceApp {
-	return &OrderServiceApp{
-		service: service,
-	}
-}
 
 func TestOrderServiceApp_CreateOrder(t *testing.T) {
 	t.Run("creates order successfully with valid customer_id", func(t *testing.T) {
@@ -85,16 +66,20 @@ func TestOrderServiceApp_CreateOrder(t *testing.T) {
 
 func TestOrderServiceApp_GetOrderById(t *testing.T) {
 	t.Run("returns order when found", func(t *testing.T) {
-		mockService := new(MockOrderService)
+		// Use generated mock - auto cleanup and assert expectations
+		mockService := mocks.NewMockOrderServiceInterface(t)
+
 		orderID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440001")
 		expectedOrder := &order_repository.Order{
 			ID:   orderID,
 			Name: "Test Order",
 		}
 
-		mockService.On("GetOrderById", mock.Anything, mock.MatchedBy(func(req *order_service.GetOrderByIdRequest) bool {
-			return req.Id == orderID
-		})).Return(expectedOrder, nil)
+		mockService.EXPECT().
+			GetOrderById(mock.Anything, mock.MatchedBy(func(req *order_service.GetOrderByIdRequest) bool {
+				return req.Id == orderID
+			})).
+			Return(expectedOrder, nil)
 
 		ctx := context.Background()
 		req := &order.GetOrderByIdRequest{
@@ -110,7 +95,6 @@ func TestOrderServiceApp_GetOrderById(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		assert.Equal(t, orderID, result.ID)
-		mockService.AssertExpectations(t)
 	})
 
 	t.Run("toOrder converts repository order to response correctly", func(t *testing.T) {
@@ -215,7 +199,7 @@ func TestOrderServiceApp_GetOrderById_UUIDValidation(t *testing.T) {
 // Integration-style test for the mock service
 func TestMockOrderService(t *testing.T) {
 	t.Run("mock service returns expected values", func(t *testing.T) {
-		mockService := new(MockOrderService)
+		mockService := mocks.NewMockOrderServiceInterface(t)
 
 		orderID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440001")
 		expectedOrder := &order_repository.Order{
@@ -223,25 +207,27 @@ func TestMockOrderService(t *testing.T) {
 			Name: "Test Order",
 		}
 
-		mockService.On("GetOrderById", mock.Anything, mock.Anything).Return(expectedOrder, nil)
+		mockService.EXPECT().
+			GetOrderById(mock.Anything, mock.Anything).
+			Return(expectedOrder, nil)
 
 		result, err := mockService.GetOrderById(context.Background(), &order_service.GetOrderByIdRequest{Id: orderID})
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		assert.Equal(t, orderID, result.ID)
-		mockService.AssertExpectations(t)
 	})
 
 	t.Run("mock service returns error", func(t *testing.T) {
-		mockService := new(MockOrderService)
+		mockService := mocks.NewMockOrderServiceInterface(t)
 
-		mockService.On("GetOrderById", mock.Anything, mock.Anything).Return(nil, errors.New("service error"))
+		mockService.EXPECT().
+			GetOrderById(mock.Anything, mock.Anything).
+			Return(nil, errors.New("service error"))
 
 		result, err := mockService.GetOrderById(context.Background(), &order_service.GetOrderByIdRequest{Id: uuid.New()})
 
 		require.Error(t, err)
 		assert.Nil(t, result)
-		mockService.AssertExpectations(t)
 	})
 }

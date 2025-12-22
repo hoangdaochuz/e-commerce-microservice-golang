@@ -3,11 +3,15 @@
 # Documentation: https://vektra.github.io/mockery/
 
 with-expecter: true
-testonly: true
 dir: "mocks/{{.PackageName}}"
 mockname: "Mock{{.InterfaceName}}"
 outpkg: "mocks"
 filename: "{{.InterfaceName | snakecase}}_mock.go"
+
+# Fix deprecation warnings for v3 compatibility
+resolve-type-alias: false
+disable-version-string: true
+issue-845-fix: true
 
 packages:
   github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository:
