@@ -24,6 +24,14 @@ import (
 	"github.com/spf13/viper"
 )
 
+// AuthServiceInterface defines the contract for auth service operations
+type AuthServiceInterface interface {
+	Login(ctx context.Context, req *auth.LoginRequest) (*auth.RedirectResponse, error)
+	Callback(ctx context.Context, req *auth.CallbackRequest) (*custom_nats.Response, error)
+	GetMyProfile(ctx context.Context, req *auth.EmptyRequest) (*auth.GetMyProfileResponse, error)
+	Logout(ctx context.Context, req *auth.EmptyRequest) (*auth.RedirectResponse, error)
+}
+
 type AuthService struct {
 	// ctx context.Context
 	// zitadelAuth       *zitadel_authentication.Auth[claims.Claim]
@@ -31,6 +39,9 @@ type AuthService struct {
 	zitadelAuthorizer  zitadel_authorization.Authorizer
 	// cookieHandler     zitadel_authentication.CookieHandler
 }
+
+// Ensure AuthService implements AuthServiceInterface
+var _ AuthServiceInterface = (*AuthService)(nil)
 
 var _ = di.Make[*AuthService](NewAuthService)
 

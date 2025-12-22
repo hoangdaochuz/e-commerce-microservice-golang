@@ -152,3 +152,149 @@ tasks:
         echo "auth:$AUTH_PID" >> pid.txt
         echo "Auth service started with PID: $AUTH_PID"
         wait
+
+  # ==================== Testing Tasks ====================
+
+  test:
+    desc: Run all tests (unit + integration)
+    cmds:
+      - task: test:unit
+      - task: test:integration
+
+  test:unit:
+    desc: Run unit tests only
+    cmds:
+      - |
+        echo "Running unit tests..."
+        go test -v -race -short \
+          ./api_gateway/... \
+          ./apps/order/... \
+          ./apps/auth/... \
+          ./pkg/... \
+          ./testutil/... \
+          2>&1 | tee test-unit-output.txt
+        echo "Unit tests completed!"
+
+  test:integration:
+    desc: Run integration tests (requires infrastructure)
+    cmds:
+      - |
+        echo "Running integration tests..."
+        go test -v -race -tags=integration \
+          ./api_gateway/... \
+          ./apps/order/... \
+          ./apps/auth/... \
+          2>&1 | tee test-integration-output.txt
+        echo "Integration tests completed!"
+
+  test:e2e:
+    desc: Run end-to-end tests (requires running services)
+    vars:
+      API_URL: '{{.API_URL | default "http://localhost:8080"}}'
+    cmds:
+      - |
+        echo "Running E2E tests against {{.API_URL}}..."
+        E2E_API_GATEWAY_URL={{.API_URL}} go test -v -tags=e2e ./e2e/... -timeout 5m
+        echo "E2E tests completed!"
+
+  test:coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - |
+        echo "Running tests with coverage..."
+        go test -v -race -coverprofile=coverage.out -covermode=atomic \
+          ./api_gateway/... \
+          ./apps/order/... \
+          ./apps/auth/... \
+          ./pkg/... \
+          ./testutil/...
+
+        echo ""
+        echo "Coverage Summary:"
+        go tool cover -func=coverage.out | tail -20
+
+        echo ""
+        echo "Generating HTML coverage report..."
+        go tool cover -html=coverage.out -o coverage.html
+        echo "Coverage report saved to coverage.html"
+
+  test:coverage:view:
+    desc: Open coverage report in browser
+    deps: [test:coverage]
+    cmds:
+      - |
+        if command -v open &> /dev/null; then
+          open coverage.html
+        elif command -v xdg-open &> /dev/null; then
+          xdg-open coverage.html
+        else
+          echo "Please open coverage.html in your browser"
+        fi
+
+  test:watch:
+    desc: Watch for changes and run tests
+    cmds:
+      - |
+        if ! command -v watchexec &> /dev/null; then
+          echo "watchexec not found. Install with: brew install watchexec"
+          exit 1
+        fi
+        watchexec -e go -- go test -short ./...
+
+  # ==================== Mock Generation Tasks ====================
+
+  mocks:generate:
+    desc: Generate mocks using Mockery
+    cmds:
+      - |
+        echo "Checking for mockery..."
+        if ! command -v mockery &> /dev/null; then
+          echo "Installing mockery..."
+          go install github.com/vektra/mockery/v2@latest
+        fi
+
+        echo "Generating mocks..."
+        mockery
+        echo "Mocks generated successfully!"
+
+  mocks:clean:
+    desc: Clean generated mocks
+    cmds:
+      - |
+        echo "Cleaning mocks directory..."
+        rm -rf mocks/
+        echo "Mocks cleaned!"
+
+  mocks:regenerate:
+    desc: Clean and regenerate all mocks
+    cmds:
+      - task: mocks:clean
+      - task: mocks:generate
+
+  # ==================== Test Help ====================
+
+  test:help:
+    desc: Show help for testing tasks
+    cmds:
+      - |
+        echo "Testing Tasks"
+        echo "============="
+        echo ""
+        echo "Available tasks:"
+        echo "  task test              - Run all tests (unit + integration)"
+        echo "  task test:unit         - Run unit tests only (fast)"
+        echo "  task test:integration  - Run integration tests (requires infra)"
+        echo "  task test:e2e          - Run E2E tests (requires running services)"
+        echo "  task test:coverage     - Generate coverage report"
+        echo "  task test:coverage:view - Open coverage report in browser"
+        echo "  task test:watch        - Watch for changes and run tests"
+        echo ""
+        echo "Mock Generation:"
+        echo "  task mocks:generate    - Generate mocks using Mockery"
+        echo "  task mocks:clean       - Clean generated mocks"
+        echo "  task mocks:regenerate  - Clean and regenerate all mocks"
+        echo ""
+        echo "Examples:"
+        echo "  task test:unit                          # Quick feedback during development"
+        echo "  task test:coverage                      # Check coverage before PR"
+        echo "  task test:e2e API_URL=http://staging:8080  # Run E2E against staging"

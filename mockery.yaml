@@ -1,0 +1,24 @@
+# mockery configuration
+# Run `mockery` in project root to generate mocks
+# Documentation: https://vektra.github.io/mockery/
+
+with-expecter: true
+testonly: true
+dir: "mocks/{{.PackageName}}"
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "mocks"
+filename: "{{.InterfaceName | snakecase}}_mock.go"
+
+packages:
+  github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository:
+    interfaces:
+      OrderRepositoryInterface:
+  github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/services/order:
+    interfaces:
+      OrderServiceInterface:
+  github.com/hoangdaochuz/ecommerce-microservice-golang/apps/auth/services/auth:
+    interfaces:
+      AuthServiceInterface:
+  github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/cache:
+    interfaces:
+      Cache:
