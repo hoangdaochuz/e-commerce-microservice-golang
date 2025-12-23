@@ -1,6 +1,6 @@
 module github.com/hoangdaochuz/ecommerce-microservice-golang
 
-go 1.24.1
+go 1.25
 
 require (
 	github.com/XSAM/otelsql v0.40.0
