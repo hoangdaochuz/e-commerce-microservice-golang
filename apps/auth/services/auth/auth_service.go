@@ -124,7 +124,7 @@ func NewAuthService() (*AuthService, error) {
 	}
 
 	var redisCache *cache_pkg.RedisCache
-	di.Resolve(func(cache *cache_pkg.RedisCache) {
+	_ = di.Resolve(func(cache *cache_pkg.RedisCache) {
 		redisCache = cache
 	})
 	authorizer, err := zitadel_authorization.NewZitadelAuthorizer(context.TODO(), authDomain, zitadelKeyBase64, redisCache)

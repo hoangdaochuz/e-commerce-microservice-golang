@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	apigateway "github.com/hoangdaochuz/ecommerce-microservice-golang/api_gateway"
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
@@ -17,12 +18,12 @@ import (
 
 func main() {
 	di.InitDIContainer()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	config, err := configs.Load()
 	if err != nil {
-		log.Fatal("failed to load configuration: %w", err)
+		log.Fatalf("failed to load configuration: %v", err)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	logger := logging.GetSugaredLogger()
 	natsConn, err := nats.Connect(config.NatsAuth.NATSUrl, nats.UserInfo(config.NatsAuth.NATSApps[0].Username, config.NatsAuth.NATSApps[0].Password))
 	if err != nil {
@@ -33,12 +34,13 @@ func main() {
 
 	mux := http.NewServeMux()
 	apigatewayServer := &http.Server{
-		Addr:    ":" + config.Apigateway.Port,
-		Handler: mux,
+		Addr:              ":" + config.Apigateway.Port,
+		Handler:           mux,
+		ReadHeaderTimeout: 30 * time.Second,
 	}
 
 	gateway := apigateway.NewAPIGateway(natsConn, apigatewayServer, mux, ctx)
-	di.Make[*apigateway.APIGateway](func() *apigateway.APIGateway {
+	_ = di.Make[*apigateway.APIGateway](func() *apigateway.APIGateway {
 		return gateway
 	})
 	err = gateway.Start()

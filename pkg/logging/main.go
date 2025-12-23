@@ -44,7 +44,7 @@ func initLogger() {
 	if err != nil {
 		log.Fatal("failed to build logger: ", err)
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 	logger.Info("logger initialized")
 }
 

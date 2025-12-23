@@ -15,12 +15,12 @@ import (
 
 type OrderServiceApp struct {
 	order.UnimplementedOrderServiceServer
-	service *order_service.OrderService
+	service order_service.OrderServiceInterface
 	// order_service_layer here
 	// other service
 }
 
-func NewOrderServiceApp(orderService *order_service.OrderService) *OrderServiceApp {
+func NewOrderServiceApp(orderService order_service.OrderServiceInterface) *OrderServiceApp {
 	return &OrderServiceApp{
 		service: orderService,
 	}

@@ -21,3 +21,7 @@ api_key.txt
 loki/
 logs
 tempo/
+
+
+# Mocks
+mocks/

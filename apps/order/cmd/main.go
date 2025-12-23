@@ -30,7 +30,7 @@ func main() {
 	chi := chi.NewRouter()
 	router := custom_nats.NewRouter(chi)
 	var orderApp *order.OrderServiceApp
-	di.Resolve(func(orderImplement *order.OrderServiceApp) {
+	_ = di.Resolve(func(orderImplement *order.OrderServiceApp) {
 		logging.GetSugaredLogger().Infof("orderImplement: %v", orderImplement)
 		orderApp = orderImplement
 	})
@@ -45,8 +45,8 @@ func main() {
 	})
 	err = server.Start()
 	if err != nil {
+		_ = server.Stop()
 		log.Fatal("fail to start order server")
-		server.Stop()
 	}
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, syscall.SIGTERM, syscall.SIGINT)

@@ -235,10 +235,10 @@ func Load() (*Config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	_ = viper.BindEnv("general_config.mode", "GENERAL_CONFIG_MODE")
-	viper.BindEnv("zitadel_configs.client_id", "ZITADEL_CONFIGS_CLIENT_ID")
-	viper.BindEnv("zitadel_configs.redirect_uri", "ZITADEL_CONFIGS_REDIRECT_URI")
-	viper.BindEnv("zitadel_configs.api_key_base64", "ZITADEL_CONFIGS_API_KEY_BASE64")
-	viper.BindEnv("zitadel_configs.encrypt_key", "ZITADEL_CONFIGS_ENCRYPT_KEY")
+	_ = viper.BindEnv("zitadel_configs.client_id", "ZITADEL_CONFIGS_CLIENT_ID")
+	_ = viper.BindEnv("zitadel_configs.redirect_uri", "ZITADEL_CONFIGS_REDIRECT_URI")
+	_ = viper.BindEnv("zitadel_configs.api_key_base64", "ZITADEL_CONFIGS_API_KEY_BASE64")
+	_ = viper.BindEnv("zitadel_configs.encrypt_key", "ZITADEL_CONFIGS_ENCRYPT_KEY")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("failed to read config file: %w", err)

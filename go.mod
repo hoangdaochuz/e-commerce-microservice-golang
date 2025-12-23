@@ -1,6 +1,6 @@
 module github.com/hoangdaochuz/ecommerce-microservice-golang
 
-go 1.24.1
+go 1.25
 
 require (
 	github.com/XSAM/otelsql v0.40.0
@@ -46,6 +46,7 @@ require (
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect

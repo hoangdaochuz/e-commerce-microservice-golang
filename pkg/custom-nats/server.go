@@ -47,7 +47,10 @@ func (s *Server) setShutdownTracing(shutdownTracing func()) {
 func (s *Server) subcribeNats() (*nats.Subscription, error) {
 	handler := func(msg *nats.Msg) {
 		var natsRequest Request
-		json.Unmarshal(msg.Data, &natsRequest)
+		if err := json.Unmarshal(msg.Data, &natsRequest); err != nil {
+			logging.GetSugaredLogger().Errorf("fail to unmarshal nats request: %v", err)
+			return
+		}
 		request, err := NatsRequestToHttpRequest(&natsRequest)
 		if err != nil {
 			logging.GetSugaredLogger().Errorf("fail to change nats request to http request: %v", err)

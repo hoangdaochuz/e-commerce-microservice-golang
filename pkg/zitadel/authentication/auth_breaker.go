@@ -19,7 +19,7 @@ type AuthBreakerConfig struct {
 	HttpClientConfig *httpclient.Config
 	// BreakerConfig    *circuitbreaker.Config
 	Breaker *circuitbreaker.Breaker[*httpclient.HTTPResponse]
-	// wheter allow using cached value when error
+	// whether allow using cached value when error
 	IsEnableCache bool
 
 	// cache tts

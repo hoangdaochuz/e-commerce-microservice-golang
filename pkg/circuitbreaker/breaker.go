@@ -11,7 +11,7 @@ import (
 type Breaker[T any] struct {
 	cb     *gobreaker.CircuitBreaker[T]
 	config *Config
-	//metrics MetricsCollector // Implement later
+	// metrics MetricsCollector // Implement later
 }
 
 func NewBreaker[T any](cfg *Config) *Breaker[T] {

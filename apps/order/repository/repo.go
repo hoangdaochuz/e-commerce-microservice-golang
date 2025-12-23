@@ -10,13 +10,18 @@ import (
 	postgres "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres_sqlx"
 )
 
+type OrderRepositoryInterface interface {
+	FindOrderById(ctx context.Context, id uuid.UUID) (*Order, error)
+	CreateOrderWithTransaction(ctx context.Context, data Order, other ...interface{}) (interface{}, error)
+}
+
 type OrderRepository struct {
 	repo repo_pkg.Repo[*Order]
 }
 
-var OrderRepositoryMod = di.Make[*OrderRepository](NewOrderRepository)
+var OrderRepositoryMod = di.Make[OrderRepositoryInterface](NewOrderRepository)
 
-func NewOrderRepository() *OrderRepository {
+func NewOrderRepository() OrderRepositoryInterface {
 	orderDb := order_configs.NewOrderDatabase()
 
 	dbClient := postgres.NewPostgresDBClient(orderDb.Conn)
@@ -27,7 +32,7 @@ func NewOrderRepository() *OrderRepository {
 
 func (o *OrderRepository) FindOrderById(ctx context.Context, id uuid.UUID) (*Order, error) {
 	entity := &Order{}
-	err := o.repo.FindOne(ctx, entity, `SELECT * FROM "order" WHERE id=$1`, id)
+	err := o.repo.FindOne(ctx, entity, `SELECT * FROM "orders" WHERE id=$1`, id)
 	if err != nil {
 		return nil, err
 	}
