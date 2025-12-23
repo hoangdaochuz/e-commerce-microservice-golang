@@ -127,9 +127,13 @@ func (p *PostgresDBClient) WithTransaction(ctx context.Context, fn func(ctx cont
 	transaction := p.conn.DB.MustBegin()
 	result, err := fn(ctx, others...)
 	if err != nil {
-		err = transaction.Rollback()
+		if rollbackErr := transaction.Rollback(); rollbackErr != nil {
+			return nil, rollbackErr
+		}
 		return nil, err
 	}
-	transaction.Commit()
+	if commitErr := transaction.Commit(); commitErr != nil {
+		return nil, commitErr
+	}
 	return result, nil
 }

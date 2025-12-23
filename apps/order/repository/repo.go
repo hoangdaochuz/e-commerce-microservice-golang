@@ -32,7 +32,7 @@ func NewOrderRepository() OrderRepositoryInterface {
 
 func (o *OrderRepository) FindOrderById(ctx context.Context, id uuid.UUID) (*Order, error) {
 	entity := &Order{}
-	err := o.repo.FindOne(ctx, entity, `SELECT * FROM "order" WHERE id=$1`, id)
+	err := o.repo.FindOne(ctx, entity, `SELECT * FROM "orders" WHERE id=$1`, id)
 	if err != nil {
 		return nil, err
 	}
