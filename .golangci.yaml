@@ -42,6 +42,7 @@ issues:
     - gen
     - frontend
     - node_modules
+    - mocks
   exclude-rules:
     - path: _test\.go
       linters:
