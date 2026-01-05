@@ -51,7 +51,9 @@ func (gw *APIGateway) sendErrorResponse(w http.ResponseWriter, err string, statu
 	errResponse := map[string]string{
 		"error": err,
 	}
-	json.NewEncoder(w).Encode(errResponse)
+	if encodeErr := json.NewEncoder(w).Encode(errResponse); encodeErr != nil {
+		logging.GetSugaredLogger().Errorf("failed to encode error response: %v", encodeErr)
+	}
 }
 
 func (gw *APIGateway) writeResponse(w http.ResponseWriter, response custom_nats.Response) {
@@ -92,7 +94,7 @@ func (gw *APIGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		gw.sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Add necessary infomation to header for updating to context and use it if we need
+	// Add necessary information to header for updating to context and use it if we need
 	natsReq.AddHeader("X-User-Id", "test@1234")
 	// continue add if we want
 
@@ -172,7 +174,7 @@ func (gw *APIGateway) Start() error {
 	}
 	otlpEndpoint := viper.GetString("general_config.otlp_endpoint")
 	var redisClient *redis.Client
-	di.Resolve(func(redisPkg *redis_pkg.Redis) {
+	_ = di.Resolve(func(redisPkg *redis_pkg.Redis) {
 		redisClient = redisPkg.GetClient()
 	})
 	defer redisClient.Close()
@@ -203,7 +205,7 @@ func (gw *APIGateway) Start() error {
 	protectResourceHandler := useMiddleware(rootHandler, CorsMiddleware, ContentTypeMiddleware, RateLimitMiddleware(rateLimiter), MetricMiddleware(registry), AuthMiddleware)
 	healthCheckHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"status": "healthy",
 		})
 	})
@@ -222,7 +224,7 @@ func (gw *APIGateway) Start() error {
 	}()
 
 	err = <-errChan
-	gw.Stop()
+	_ = gw.Stop()
 	logging.GetSugaredLogger().Errorf("api gateway listen and serve fail: %v", err)
 	return err
 }

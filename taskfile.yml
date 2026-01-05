@@ -152,3 +152,37 @@ tasks:
         echo "auth:$AUTH_PID" >> pid.txt
         echo "Auth service started with PID: $AUTH_PID"
         wait
+  # ================== Testing ====================
+  test:unit:
+    desc: Run unit test
+    cmds:
+      - |
+        echo "Running unit tests"
+        go test -v $(find . -name "*_test.go" -not -path "./vendor/*" -not -path "./node_modules/*" | xargs -I {} dirname {} | sort -u | sed 's|^\.|.|')
+        echo "Unit test run completely"
+
+  # ==================== Mock Generation Tasks ====================
+  mocks:generate:
+    desc: Generate mock using mockery
+    cmds:
+      - |
+        echo "Checking for Mockery..."
+        if ! command -v mockery &> /dev/null; then
+          echo "Install Mockery..."
+          go install github.com/vektra/mockery/v2@latest
+        fi
+        echo "Generating mock..."
+        mockery
+        echo "Mocks generated successfully"
+  mocks:clean:
+    desc: Clean generated mocks
+    cmds:
+      - |
+        echo "Cleaning mocks directory..."
+        rm -rf mocks/
+        echo "Mocks cleaned!"
+  mocks:regenerate:
+    desc: Clean and regenerate all mocks
+    cmds:
+      - task: mocks:clean
+      - task: mocks:generate

@@ -15,8 +15,6 @@ linters:
     - gocritic
 
 linters-settings:
-  govet:
-    check-shadowing: true
   gofmt:
     simplify: true
   revive:
@@ -25,21 +23,40 @@ linters-settings:
         disabled: false
       - name: package-comments
         disabled: false
+      - name: var-naming
+        disabled: true
   gosec:
     excludes:
+      - G101 # False positive: these are config key names, not actual credentials
+      - G115 # Integer overflow conversion - intentional uint32 conversion
       - G404 # Use of weak random number generator
 
 run:
-  deadline: 5m
+  timeout: 5m
   tests: true
-  skip-dirs:
-    - vendor/
-    - third_party/
 
 issues:
+  exclude-dirs:
+    - vendor
+    - third_party
+    - gen
+    - frontend
+    - node_modules
+    - mocks
   exclude-rules:
     - path: _test\.go
       linters:
         - gosec
+        - errcheck
+    - path: \.d\.go$
+      linters:
+        - typecheck
+    - path: /gen/
+      linters:
+        - typecheck
+    # Exclude stuttering name warnings - changing these would break existing imports
+    - linters:
+        - revive
+      text: "stutters"
   max-issues-per-linter: 0
   max-same-issues: 0

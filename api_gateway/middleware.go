@@ -72,7 +72,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			if err != nil {
 				log.Fatal("fail to marshal err response")
 			}
-			w.Write(bodyByte)
+			_, _ = w.Write(bodyByte)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -87,10 +87,9 @@ func RateLimitMiddleware(rateLimiter *ratelimiter.RateLimiter) func(http.Handler
 			key := clientIP + uri
 			isAllow, err := rateLimiter.IsAllow(key)
 			if err != nil || !isAllow {
-
 				// return 429 code
 				w.WriteHeader(http.StatusTooManyRequests)
-				json.NewEncoder(w).Encode(map[string]string{
+				_ = json.NewEncoder(w).Encode(map[string]string{
 					"error": err.Error(),
 				})
 				return

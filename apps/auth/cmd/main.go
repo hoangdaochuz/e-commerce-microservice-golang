@@ -68,7 +68,7 @@ func main() {
 
 	err = server.Start()
 	if err != nil {
-		server.Stop()
+		_ = server.Stop()
 		log.Fatal("fail to start auth service app")
 	}
 	shutdowSign := make(chan os.Signal, 1)

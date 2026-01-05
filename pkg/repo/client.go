@@ -16,7 +16,7 @@ type IDBClient interface {
 	Count(ctx context.Context, query interface{}, others ...interface{}) (int, error)
 	Paginate(ctx context.Context, query, out interface{}, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error)
 	WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) (interface{}, error), others ...interface{}) (interface{}, error)
-	// comming soon
+	// coming soon
 }
 
 type Repo[model BaseModel] struct {

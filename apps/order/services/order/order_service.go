@@ -9,13 +9,17 @@ import (
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 )
 
-type OrderService struct {
-	OrderRepo *order_repository.OrderRepository
+type OrderServiceInterface interface {
+	GetOrderById(ctx context.Context, req *GetOrderByIdRequest) (*order_repository.Order, error)
 }
 
-var OrderServiceMod = di.Make[*OrderService](NewOrderService)
+type OrderService struct {
+	OrderRepo order_repository.OrderRepositoryInterface
+}
 
-func NewOrderService(repo *order_repository.OrderRepository) *OrderService {
+var OrderServiceMod = di.Make[OrderServiceInterface](NewOrderService)
+
+func NewOrderService(repo order_repository.OrderRepositoryInterface) OrderServiceInterface {
 	return &OrderService{
 		OrderRepo: repo,
 	}

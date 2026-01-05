@@ -1,0 +1,21 @@
+# mockery config file
+# Run `mockery` in root directory to generate mocks
+
+with-expecter: true
+dir: "mocks/{{.PackageName}}"
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "mocks"
+filename: "{{.InterfaceName | snakecase}}_mock.go"
+
+# Fix deprecated warnings
+resolve-type-alias: false
+disable-version-string: true
+issue-845-fix: true
+
+packages:
+  github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/services/order:
+    interfaces:
+      OrderServiceInterface:
+  github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository:
+    interfaces:
+      OrderRepositoryInterface:
