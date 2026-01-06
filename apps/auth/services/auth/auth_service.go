@@ -32,7 +32,7 @@ type AuthService struct {
 	// cookieHandler     zitadel_authentication.CookieHandler
 }
 
-var _ = di.Make[*AuthService](NewAuthService)
+var _ = di.Make[*AuthServiceInterface](NewAuthService)
 
 const (
 	AUTH_DOMAIN_KEY             = "zitadel_configs.auth_domain"
@@ -68,7 +68,7 @@ func getProjectRoleScopes(role string) []zitadel_authentication.ScopeOps {
 	}
 }
 
-func NewAuthService() (*AuthService, error) {
+func NewAuthService() (AuthServiceInterface, error) {
 	authDomain := viper.GetString(AUTH_DOMAIN_KEY)
 	zitadelKeyBase64 := viper.GetString(API_KEY_BASE64_KEY)
 	sessionExpiredSeconds, err := strconv.Atoi(viper.GetString(SESSION_EXPIRED_SECONDS))
@@ -284,4 +284,16 @@ func (srv *AuthService) Logout(ctx context.Context, req *auth.EmptyRequest) (*au
 		IsSuccess:   true,
 		RedirectURL: endSessionUrl,
 	}, nil
+}
+
+type AuthServiceInterface interface {
+	Login(ctx context.Context, req *auth.LoginRequest) (*auth.RedirectResponse, error)
+
+	Callback(ctx context.Context, req *auth.CallbackRequest) (*custom_nats.Response, error)
+
+	ValidateToken() (bool, error)
+
+	GetMyProfile(ctx context.Context, req *auth.EmptyRequest) (*auth.GetMyProfileResponse, error)
+
+	Logout(ctx context.Context, req *auth.EmptyRequest) (*auth.RedirectResponse, error)
 }

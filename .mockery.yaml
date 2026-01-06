@@ -19,3 +19,6 @@ packages:
   github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/repository:
     interfaces:
       OrderRepositoryInterface:
+  github.com/hoangdaochuz/ecommerce-microservice-golang/apps/auth/services/auth:
+    interfaces:
+      AuthServiceInterface:
