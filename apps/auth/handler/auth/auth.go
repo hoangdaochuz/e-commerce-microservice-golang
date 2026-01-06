@@ -11,11 +11,11 @@ import (
 
 type AuthServiceApp struct {
 	auth.UnimplementedAuthenticateServiceServer
-	authService *auth_service.AuthService
+	authService auth_service.AuthServiceInterface
 	// other field
 }
 
-func NewAuthServiceApp(authService *auth_service.AuthService) *AuthServiceApp {
+func NewAuthServiceApp(authService auth_service.AuthServiceInterface) *AuthServiceApp {
 	return &AuthServiceApp{
 		authService: authService,
 	}
