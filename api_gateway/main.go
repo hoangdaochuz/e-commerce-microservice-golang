@@ -119,7 +119,7 @@ func (gw *APIGateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Subject: natsReq.Subject,
 		Content: natsReqByte,
 	}
-	// logging.GetSugaredLogger().Infof("Sending request ")
+	// logging.GetSugaredLogger().Infof("Sending request ") // comment here
 	start := time.Now()
 	msgResponse, err := natsConnWithCircuitBreakerWrapper.SendRequest(timeoutCtx, natsSendRequest)
 
