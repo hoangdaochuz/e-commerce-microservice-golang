@@ -19,7 +19,7 @@ type ServiceRegistryConfig struct {
 	RequestTimeout time.Duration `mapstructure:"request_timeout"`
 }
 
-type OrderDatabase struct {
+type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     string `mapstructure:"port"`
 	User     string `mapstructure:"user"`
@@ -103,7 +103,8 @@ type CircuitBreaker struct {
 type Config struct {
 	ServiceRegistry ServiceRegistryConfig `mapstructure:"service_registry"`
 	Apigateway      ApigatewayConfig      `mapstructure:"apigateway"`
-	OrderDatabase   OrderDatabase         `mapstructure:"order_database"`
+	OrderDatabase   DatabaseConfig        `mapstructure:"order_database"`
+	MongoDatabase   DatabaseConfig        `mapstructure:"mongo_db"`
 	NatsAuth        NATSAuth              `mapstructure:"nats_auth"`
 	Redis           Redis                 `mapstructure:"redis"`
 	ZitadelConfigs  ZitadelConfigs        `mapstructure:"zitadel_configs"`

@@ -123,6 +123,36 @@ func (p *PostgresDBClient) Upsert(ctx context.Context, filter, update interface{
 	panic("unimplemented")
 }
 
+// FindMigrationerByName implements [repo.IDBClient].
+func (p *PostgresDBClient) FindMigrationerByName(ctx context.Context, out repo.BaseModel, query interface{}, others ...interface{}) error {
+	_query, ok := query.(string)
+	if !ok {
+		return fmt.Errorf("Query must be string")
+	}
+	return p.conn.DB.GetContext(ctx, out, _query, others...)
+}
+
+// Insert implements [repo.IDBClient].
+func (p *PostgresDBClient) Insert(ctx context.Context, data interface{}, others ...interface{}) error {
+	query, ok := data.(string)
+	if !ok {
+		return fmt.Errorf("Query must be string")
+	}
+
+	result := p.conn.DB.MustExecContext(ctx, query, others...)
+	_, err := result.LastInsertId()
+	return err
+}
+
+// Type implements [repo.IDBClient].
+func (p *PostgresDBClient) Type() string {
+	return string(repo.POSTGRES_SQLX)
+}
+
+func (p *PostgresDBClient) GetConnection() repo.IDBConnection {
+	return p.conn
+}
+
 func (p *PostgresDBClient) WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) (interface{}, error), others ...interface{}) (interface{}, error) {
 	transaction := p.conn.DB.MustBegin()
 	result, err := fn(ctx, others...)

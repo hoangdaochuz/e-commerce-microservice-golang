@@ -1,4 +1,4 @@
-package domains
+package order_domains
 
 type Order struct {
 	ID         string `json:"id"`
