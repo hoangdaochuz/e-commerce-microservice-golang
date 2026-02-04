@@ -27,6 +27,9 @@ func main() {
 		options.Client().SetMonitor(otelmongo.NewMonitor()),
 		options.Client().SetRegistry(mongo_repo.NewRegistryWithUUID()),
 	)
+	if err != nil {
+		panic("Cannot connect to MongoDB: " + err.Error())
+	}
 	mongoDBConn := &mongo_repo.MongoConnection{
 		Client: client,
 	}
