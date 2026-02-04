@@ -7,7 +7,7 @@ import (
 	order_configs "github.com/hoangdaochuz/ecommerce-microservice-golang/apps/order/configs"
 	di "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/dependency-injection"
 	repo_pkg "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo"
-	postgres "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres_sqlx"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres_gorm"
 )
 
 type OrderRepositoryInterface interface {
@@ -24,7 +24,7 @@ var OrderRepositoryMod = di.Make[OrderRepositoryInterface](NewOrderRepository)
 func NewOrderRepository() OrderRepositoryInterface {
 	orderDb := order_configs.NewOrderDatabase()
 
-	dbClient := postgres.NewPostgresDBClient(orderDb.Conn)
+	dbClient := postgres_gorm.NewPostgresGormClient(orderDb.Conn)
 	return &OrderRepository{
 		repo: repo_pkg.NewRepo[*Order](dbClient),
 	}
@@ -32,7 +32,7 @@ func NewOrderRepository() OrderRepositoryInterface {
 
 func (o *OrderRepository) FindOrderById(ctx context.Context, id uuid.UUID) (*Order, error) {
 	entity := &Order{}
-	err := o.repo.FindOne(ctx, entity, `SELECT * FROM "orders" WHERE id=$1`, id)
+	err := o.repo.FindOne(ctx, entity, "id = ?", id)
 	if err != nil {
 		return nil, err
 	}

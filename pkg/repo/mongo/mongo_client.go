@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo"
@@ -192,7 +193,7 @@ func (m *MongoDBClient) Upsert(ctx context.Context, filter, update interface{}, 
 
 // WithTransaction implements repo.IDBClient.
 func (m *MongoDBClient) WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) (interface{}, error), others ...interface{}) (interface{}, error) {
-	session, err := m.conn.client.StartSession()
+	session, err := m.conn.Client.StartSession()
 	if err != nil {
 		return nil, err
 	}
@@ -211,11 +212,41 @@ func (m *MongoDBClient) WithTransaction(ctx context.Context, fn func(ctx context
 	return result, nil
 }
 
+// FindMigrationerByName implements [repo.IDBClient].
+func (m *MongoDBClient) FindMigrationerByName(ctx context.Context, out repo.BaseModel, query interface{}, others ...interface{}) error {
+	if query == nil {
+		return fmt.Errorf("query must not be nil")
+	}
+	sigleResult := m.db.Collection(m.collectionName).FindOne(ctx, query)
+	if errors.Is(sigleResult.Err(), mongo.ErrNoDocuments) {
+		return nil
+	}
+	return sigleResult.Decode(out)
+}
+
+// Insert implements [repo.IDBClient].
+func (m *MongoDBClient) Insert(ctx context.Context, data interface{}, others ...interface{}) error {
+	if data == nil {
+		return fmt.Errorf("data to insert is invalid")
+	}
+	_, err := m.db.Collection(m.collectionName).InsertOne(ctx, data)
+	return err
+}
+
+// Type implements [repo.IDBClient].
+func (m *MongoDBClient) Type() string {
+	return string(repo.MONGO)
+}
+
+func (m *MongoDBClient) GetConnection() repo.IDBConnection {
+	return m.conn
+}
+
 func NewMongoDBClient(conn *MongoConnection, databaseName, collectionName string) repo.IDBClient {
 	return &MongoDBClient{
 		conn:           conn,
 		databaseName:   databaseName,
 		collectionName: collectionName,
-		db:             conn.client.Database(databaseName),
+		db:             conn.Client.Database(databaseName),
 	}
 }

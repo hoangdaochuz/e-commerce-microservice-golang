@@ -4,10 +4,19 @@ import (
 	"context"
 )
 
+type DBClientType string
+
+const (
+	MONGO         DBClientType = "MONGO"
+	POSTGRES_GORM DBClientType = "POSTGRES_GORM"
+	POSTGRES_SQLX DBClientType = "POSTGRES_SQLX"
+)
+
 type IDBClient interface {
 	Create(ctx context.Context, query interface{}, data BaseModel, others ...interface{}) error
 	BulkCreate(ctx context.Context, query interface{}, data []interface{}, out interface{}, others ...interface{}) error
 	Upsert(ctx context.Context, filter, update interface{}, out BaseModel, others ...interface{}) error
+	Insert(ctx context.Context, data interface{}, others ...interface{}) error
 	UpdateOneAndReturn(ctx context.Context, query, update interface{}, out BaseModel, others ...interface{}) error
 	UpdateMany(ctx context.Context, filter, update, out interface{}, others ...interface{}) error
 	FindAll(ctx context.Context, out, query interface{}, others ...interface{}) error
@@ -16,6 +25,9 @@ type IDBClient interface {
 	Count(ctx context.Context, query interface{}, others ...interface{}) (int, error)
 	Paginate(ctx context.Context, query, out interface{}, paginationParams PaginationRequest, others ...interface{}) (*Pagination, error)
 	WithTransaction(ctx context.Context, fn func(ctx context.Context, others ...interface{}) (interface{}, error), others ...interface{}) (interface{}, error)
+	FindMigrationerByName(ctx context.Context, out BaseModel, query interface{}, others ...interface{}) error
+	Type() string
+	GetConnection() IDBConnection
 	// coming soon
 }
 

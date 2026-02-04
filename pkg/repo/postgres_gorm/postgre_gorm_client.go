@@ -62,7 +62,7 @@ func (p *PostgresGormClient) FindOne(ctx context.Context, out repo.BaseModel, qu
 	if query == nil {
 		return fmt.Errorf("query must not be nil")
 	}
-	return p.conn.Db.WithContext(ctx).Where(query).First(out).Error
+	return p.conn.Db.WithContext(ctx).Where(query, others...).First(out).Error
 
 }
 
@@ -126,6 +126,31 @@ func (p *PostgresGormClient) WithTransaction(ctx context.Context, fn func(ctx co
 	}
 	p.conn.Db.Commit()
 	return result, nil
+}
+
+// FindMigrationerByName implements [repo.IDBClient].
+func (p *PostgresGormClient) FindMigrationerByName(ctx context.Context, out repo.BaseModel, query interface{}, others ...interface{}) error {
+	if query == nil {
+		return fmt.Errorf("Query must not be nil")
+	}
+	return p.conn.Db.WithContext(ctx).Where(query).First(out).Error
+}
+
+// Insert implements [repo.IDBClient].
+func (p *PostgresGormClient) Insert(ctx context.Context, data interface{}, others ...interface{}) error {
+	if data == nil {
+		return fmt.Errorf("insert data is invalid")
+	}
+	return p.conn.Db.Create(&data).Error
+}
+
+// Type implements [repo.IDBClient].
+func (p *PostgresGormClient) Type() string {
+	return string(repo.POSTGRES_GORM)
+}
+
+func (p *PostgresGormClient) GetConnection() repo.IDBConnection {
+	return p.conn
 }
 
 func NewPostgresGormClient(conn *PostgresGormConnection) repo.IDBClient {

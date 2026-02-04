@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/hoangdaochuz/ecommerce-microservice-golang/configs"
-	postgres "github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres_sqlx"
+	"github.com/hoangdaochuz/ecommerce-microservice-golang/pkg/repo/postgres_gorm"
 	_ "github.com/lib/pq"
 )
 
 type OrderDatabase struct {
-	Conn *postgres.PostgresConnection
+	Conn *postgres_gorm.PostgresGormConnection
 }
 
 func NewOrderDatabase() *OrderDatabase {
@@ -19,7 +19,7 @@ func NewOrderDatabase() *OrderDatabase {
 	}
 	dsn := fmt.Sprintf("host=%s port =%s user=%s password=%s dbname=%s sslmode=disable", config.OrderDatabase.Host, config.OrderDatabase.Port, config.OrderDatabase.User, config.OrderDatabase.Password, config.OrderDatabase.DBname)
 
-	conn := &postgres.PostgresConnection{}
+	conn := &postgres_gorm.PostgresGormConnection{}
 	err = conn.Connect(dsn)
 	if err != nil {
 		panic("Fail to connect to order database: " + err.Error())
