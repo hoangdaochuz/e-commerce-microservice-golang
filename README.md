@@ -1,161 +1,224 @@
 # E-commerce Microservice in Go
 
-This is a microservices-based e-commerce application built with Go, implementing modern cloud-native patterns and best practices.
+A microservices-based e-commerce application built with Go, implementing modern cloud-native patterns including DDD (Domain Driven Design), NATS messaging, API Gateway pattern, and database-per-service architecture.
 
-## Features
+## Tech Stack
 
-- Microservices architecture
-- gRPC for inter-service communication
-- NATS for asynchronous messaging
-- PostgreSQL database with sqlx
-- API Gateway pattern
-- Frontend code generation for TypeScript/React Query
+| Category | Technology |
+|----------|-----------|
+| Language | Go 1.25 |
+| Messaging | NATS (with JetStream) |
+| Databases | PostgreSQL, MongoDB, Redis |
+| HTTP Router | Chi |
+| Auth | Zitadel (OAuth2/OIDC) |
+| Observability | OpenTelemetry, Prometheus, Grafana, Loki, Tempo |
+| Resilience | Circuit Breaker (sony/gobreaker), Rate Limiting |
+| DI | uber/dig |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS |
+
+## Communication Flow
+
+```
+Client --> API Gateway (port 8080) --> NATS --> Microservices --> Databases
+```
+
+- **API Gateway** (`cmd/main.go`, `api_gateway/`): Translates HTTP requests to NATS messages with middleware (CORS, rate limiting, auth, metrics, tracing)
+- **NATS** (`pkg/custom-nats/`): Message broker for inter-service communication using request-response pattern
+- **Services** (`apps/*/`): Domain services that subscribe to NATS subjects
 
 ## Project Structure
 
-## Project Architecture
-We have designed the database schema in folder `docs/database-design` and the schema is in file `docs/database-design/schema/Ecommerce-db.sql`
-Base on the schema, We applied DDD (Domain Driven Design) to design the project.
-We have 11 main services that serve for specific domain business:
-- `apps/product`: Product service
-- `apps/shop`: Shop service
-- `apps/order`: Order service
-- `apps/user`: User service
-- `apps/address`: Address service
-- `apps/settings`: Settings service
-- `apps/cart`: Cart service
-- `apps/voucher`: Voucher service
-- `apps/comment`: Comment service
-- `apps/notification`: Notification service
-- `apps/payment`: Payment service
-
-Based on DDD(Domain Driven Design), we will aggregate the tables that have relation to business domain into a single service. 
-
-We use pattern `Database per Service` to design the project. So each service has its own database. Let read for more detail:
-
-### Product service:
-#### Tables:
-- `Products`
-- `Category`
-- `Category_product`
-- `Inventory`
-- `Product_voucher`
-
-#### Database type:
-- SQL (PostgreSQL)
-#### Why?
-- The complexity of the relation between tables and we need many join query to get the data.
-- We need the transaction to ensure the data consistency. Ex: Update the inventory when user buy a product.
-
-### Shop service:
-#### Tables:
-- `Shop_info`
-#### Database type:
-- SQL (PostgreSQL)
-#### Why?
-- The shop service needs to maintain ACID properties for shop information updates
-- Shop data requires complex queries and joins with products and users
-- SQL provides better data consistency and integrity which is important for shop management
-- Shop data is structured and relationships need to be strictly enforced
-
-### Order service:
-#### Tables:
-- `Order`
-- `Order_items`
-#### Database type:
-- SQL (PostgreSQL)
-#### Why?
-- Order data requires ACID transactions to maintain data consistency when processing orders
-- Complex joins needed between orders, order items, products and users
-- SQL provides better support for handling financial transactions and order history
-- Order data is highly structured with clear relationships that need to be enforced
-- Need strong consistency guarantees for order processing and payment handling
-
-### User service:
-#### Tables:
-- `User`
-- `Profile`
-#### Database type:
-- NoSQL (MongoDB)
-#### Why?
-- User data is unstructured and requires flexible schema for different user types
-- User data is highly dynamic and requires flexible schema for different user types
-
-### Address service:
-#### Tables:
-- `Address`
-#### Database type:
-- SQL (PostgreSQL)
-#### Why?
-- Address data is highly structured and requires clear relationships between users and addresses
-
-### Settings service:
-#### Tables:
-- `Setting`
-#### Database type:
-- NoSQL (MongoDB)
-#### Why?
-- Settings data need to be stored in a flexible schema to support different user types
-- It's easy to change the schema of the settings data
-
-### Cart service:
-#### Tables:
-- `Shopping_carts`
-#### Database type:
-- NoSQL (Redis) 
-- SQL (PostgreSQL)
-#### Why?
-- The cart change frequently and we need to update the cart data frequently.
-- But, We also need store the backup of the cart data for the user to analyze the cart data and the behavior of the user -> we also to support suggestion service for user.
-
-### Voucher service:
-#### Tables:
-- `Voucher`
-#### Database type:
-- SQL (PostgreSQL)
-#### Why?
-- The relation between product and voucher is many to many.
-
-### Comment service:
-#### Tables:
-- `Comment`
-#### Database type:
-- NoSQL (MongoDB)
-#### Why?
-- Comments often include unstructured data like text, images, and ratings
-- Comments can be nested (replies to comments) which is well-suited for document databases
-- Comments don't require complex joins with other data
-- MongoDB's flexible schema allows easy addition of new comment features
-- High write throughput needed for popular products with many comments
-
-### Notification service:
-#### Tables:
-- `Notification`
-#### Database type:
-- NoSQL (MongoDB)
-#### Why?
-- Notifications are often sent to users and require flexible schema for different user types
-- No need transaction for notification
-
-### Payment service:
-#### Tables:
-- `Payment`
-#### Database type:
-- SQL (PostgreSQL)
-#### Why?
-- Payment is a financial transaction and we need to ensure the data consistency.
-- Need ensure the data consistency between payment and order.
-## Run docker
-- From root project
 ```
+.
+├── api_gateway/          # API Gateway (HTTP -> NATS proxy, middleware)
+├── apps/
+│   ├── auth/             # Authentication service (OAuth2/OIDC, JWT, sessions)
+│   ├── order/            # Order management service (PostgreSQL)
+│   ├── product/          # Product service (in progress)
+│   ├── nats_auth/        # NATS authentication callout service
+│   └── main.go           # Placeholder
+├── cmd/
+│   └── main.go           # API Gateway entry point
+├── configs/              # YAML configuration (Viper)
+├── docs/                 # Architecture docs, DB design, implementation plans
+├── frontend/
+│   ├── apis/             # Generated TypeScript API clients
+│   └── customer_app/     # Next.js customer-facing app
+├── infra/                # Docker Compose, NATS config, observability configs, k8s
+├── migrationer/          # Database migration scripts
+├── mocks/                # Generated test mocks (mockery)
+├── pkg/                  # Shared libraries (see below)
+├── shared/               # Shared constants, error types, context keys
+├── tools/                # Migration runner CLI
+└── taskfile.yml          # Task runner commands
+```
+
+### Shared Packages (`pkg/`)
+
+| Package | Purpose |
+|---------|---------|
+| `cache` | In-memory and Redis caching abstraction |
+| `circuitbreaker` | Circuit breaker pattern (sony/gobreaker) |
+| `codegen` | Code generation CLI (proto -> .d.go, frontend TypeScript) |
+| `configs` | Viper-based YAML configuration loading |
+| `custom-nats` | NATS client, server, router, HTTP-to-NATS transformation |
+| `dependency-injection` | DI container using uber/dig |
+| `httpclient` | HTTP client with circuit breaker |
+| `logging` | Zap-based structured logging |
+| `metric` | Prometheus metrics collection |
+| `migration` | Database migration framework (MongoDB, PostgreSQL) |
+| `rate_limiter` | Redis-based distributed rate limiting |
+| `redis` | Redis client initialization |
+| `repo` | Repository pattern abstraction (PostgreSQL/sqlx, MongoDB, GORM) |
+| `tracing` | OpenTelemetry distributed tracing (OTLP) |
+| `utils` | Utility functions (JSON, struct conversion) |
+| `zitadel` | OAuth2/OIDC integration with Zitadel |
+
+## Services
+
+### Implemented
+
+| Service | Path | Database | Description |
+|---------|------|----------|-------------|
+| Auth | `apps/auth` | Redis (sessions) | OAuth2/OIDC authentication via Zitadel, JWT tokens, session management |
+| Order | `apps/order` | PostgreSQL | Order processing and management |
+| NATS Auth | `apps/nats_auth` | - | Custom NATS authentication callout using Xkey encryption |
+
+### Planned (per DDD design)
+
+| Service | Database | Description |
+|---------|----------|-------------|
+| Product | PostgreSQL | Product catalog, categories, inventory |
+| Shop | PostgreSQL | Shop information |
+| User | MongoDB | User profiles |
+| Address | PostgreSQL | Address management |
+| Settings | MongoDB | User settings |
+| Cart | Redis + PostgreSQL | Shopping cart with backup for analytics |
+| Voucher | PostgreSQL | Voucher management |
+| Comment | MongoDB | Product comments and ratings |
+| Notification | MongoDB | User notifications |
+| Payment | PostgreSQL | Payment processing |
+
+## Database Design
+
+We use the **Database per Service** pattern. Each service owns its database, chosen based on domain requirements:
+
+- **PostgreSQL**: For services needing ACID transactions, complex joins, and relational integrity (Order, Product, Shop, Address, Voucher, Payment)
+- **MongoDB**: For services with flexible/unstructured schemas (User, Settings, Comment, Notification)
+- **Redis**: For high-frequency read/write data (Cart, Sessions)
+
+The full database schema is in `docs/database-design/schema/Ecommerce-db.sql`.
+
+## Getting Started
+
+### Prerequisites
+
+- Go 1.25+
+- Docker & Docker Compose
+- [Task](https://taskfile.dev/) (task runner)
+- [Bun](https://bun.sh/) (for frontend)
+
+### Start Infrastructure
+
+```bash
 docker compose -f ./infra/docker-compose.yml -p e-commerce-microservice-golang up
 ```
 
-## Run the project
-```
-go run cmd/api_gateway/main.go
+This starts: NATS, PostgreSQL, MongoDB, Redis, Prometheus, Grafana, Loki, Tempo, and the OpenTelemetry collector (Alloy).
+
+### Run Backend Services
+
+```bash
+# Run all backend services (API Gateway + Auth + Order)
+task backend:dev
+
+# Or run individually
+task backend:api_gateway
+task backend:authenticate
+task backend:order
 ```
 
+### Run Frontend
 
-go run cmd/api_gateway/main.go
+```bash
+cd frontend/customer_app
+bun install
+bun dev
 ```
+
+## Development
+
+### Code Generation
+
+Each microservice uses proto files to define its API contract. After modifying a `.proto` file:
+
+```bash
+# Generate Go code from proto (protobuf + gRPC)
+task backend:codegen -- apps/{service}/proto/{service}.proto
+
+# Generate .d.go contract file (NATS subjects, interfaces, proxies, routers)
+task backend:codegen:dgo -- apps/{service}/proto/{service}.proto
+
+# Generate TypeScript clients for frontend
+task frontend:codegen:service    # Single service
+task frontend:codegen:all        # All services
+```
+
+### Testing
+
+```bash
+# Run all unit tests
+task test:unit
+
+# Generate mocks
+task mocks:generate
+
+# Clean and regenerate mocks
+task mocks:regenerate
+```
+
+### Linting
+
+```bash
+golangci-lint run ./...
+```
+
+### Database Migrations
+
+```bash
+go run tools/migration/main.go
+```
+
+## Observability
+
+The project includes a full observability stack:
+
+| Tool | Port | Purpose |
+|------|------|---------|
+| Prometheus | 9090 | Metrics collection |
+| Grafana | 3001 | Dashboards and visualization |
+| Loki | 3100 | Log aggregation |
+| Tempo | 3200 | Distributed tracing backend |
+| Alloy | 4317, 4318 | OpenTelemetry collector |
+
+- **Tracing**: OpenTelemetry with OTLP export to Tempo
+- **Metrics**: Prometheus client, exposed at `/metrics`
+- **Logging**: Structured logging via Zap, aggregated to Loki
+
+## Resilience
+
+- **Circuit Breaker**: Configured per service for NATS calls, database connections, and external APIs (Zitadel). Uses three states: CLOSED -> OPEN -> HALF-OPEN. Configuration in `configs/config.yaml`.
+- **Rate Limiting**: Redis-based distributed rate limiter (default: 50 requests/minute) applied at the API Gateway.
+
+## Configuration
+
+All configuration is managed via `configs/config.yaml` using Viper. Key sections:
+
+- `nats_auth` - NATS connection and authentication
+- `apigateway` - Gateway port (default: 8080)
+- `order_database` - PostgreSQL connection for order service
+- `mongo_db` - MongoDB connection
+- `redis` - Redis connection
+- `zitadel_configs` - OAuth2/OIDC provider endpoints
+- `circuit_breaker` - Per-service circuit breaker thresholds
+- `general_config` - OTLP endpoint, backend/frontend URLs
